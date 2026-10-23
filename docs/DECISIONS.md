@@ -147,3 +147,30 @@ agree); input only, output and instruction text are not included. The pages
 give no token quota for Claude Code Pro, so the number of sessions is shown
 only under assumed capacities. Model speed and quality are measured in the
 pilot; for a local model only tokens are given.
+
+## 2026-10-23: Layer 1 takes all title-matched sections (one rule)
+
+Integrated Reviews keep a short non-clinical summary in the main body and the
+detailed non-clinical assessment in a later section/appendix; layer 1 takes all
+title-matched sections. The numbered-first rule is dropped. Diagnosis of the
+three short sections (Qulipta, Welireg, Pombiliti), from heading lines and page
+numbers only: the end rule was right in all three (a sub-heading does not end a
+section, the next heading at the same or a higher level does). The cause was
+the start choice. In Qulipta and Pombiliti the numbered match was sub-section
+5.1 of one page; in Welireg it was a labelling-table line ("13. Nonclinical")
+chosen over the section heading on page 32.
+
+Rule, the same for every format except separate reviews (the whole document):
+the section is the union of every title match; table of contents lines do not
+count; a bookmark title over 90 characters does not count (the same limit as
+heading lines; a first run with the union let one long cover bookmark in
+Pemazyre run to the last page, 202 of 202 pages). Each match ends at the next
+heading at the same or a higher level (bookmarks: same or shallower; headings:
+numbered, first number at most one higher), for an unnumbered heading at the
+next heading beginning with "Clinical", else at the last page. Overlapping and
+adjacent ranges are merged. Result on the 48 sample documents: 15 changed,
+none under 3 pages, none not found; section pages 1,899 to 2,263 of 8,943
+document pages (FDA 1,502 to 1,838, EMA 397 to 425); Qulipta 1 to 101,
+Welireg 1 to 52, Pombiliti 1 to 83; estimated input 20.7 M to 25.8 M tokens.
+Known cost: signature and team lists with a title word add one or two pages
+each. Layer 1 sees no codebook word and no outcome.

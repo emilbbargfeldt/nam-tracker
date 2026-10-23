@@ -307,34 +307,34 @@ Verdicts 'no' that rest on the known-signal alone (no conclusion sentence): 41 o
 
 ## Layer 1: non-clinical section of the sample (PREREG v3 b)
 
-Located by bookmarks, else heading-like lines, with the section-title words of `outline.py`; a numbered match beats an unnumbered one (cover and signature pages carry unnumbered matches; added after a first run, from page numbers only). Separate non-clinical reviews are the section as a whole. Characters are counted with whitespace folded. 'Low' = pages in the section below the text-layer threshold (100 characters). Short sections (under 3 pages) are marked: they may be right (integrated reviews are brief) or a heading found next to its successor; they are not corrected and should be checked by page number.
+Located by bookmarks, else heading-like lines, with the section-title words of `outline.py`. One rule for every format: the section is the union of all title matches (table of contents lines and bookmark titles over 90 characters do not count), each ended by the next heading at the same or a higher level (a sub-heading does not end it); overlapping ranges are merged. Separate non-clinical reviews are the section as a whole. Characters are counted with whitespace folded. 'Low' = pages in the section below the text-layer threshold (100 characters). Sections under 3 pages are marked 'short' and should be checked by page number. Integrated Reviews keep a short non-clinical summary in the main body and the detailed non-clinical assessment in a later section or appendix, which is why the union is used.
 
-| Authority | Year | Drug | Format | Pages | Section pages | Found | Basis | Pages (from-to) | Characters | Low | Flag |
+| Authority | Year | Drug | Format | Pages | Section pages | Found | Basis | Page ranges | Characters | Low | Flag |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | FDA | 2015 | Uptravi | separate | 379 | 379 | yes | document type | 1-379 | 221031 | 216 |  |
 | FDA | 2015 | Alecensa | separate | 154 | 154 | yes | document type | 1-154 | 109666 | 91 |  |
-| FDA | 2016 | Rubraca | multidisc | 232 | 11 | yes | headings | 32-42 | 25148 | 0 |  |
+| FDA | 2016 | Rubraca | multidisc | 232 | 13 | yes | headings | 4-4,8-8,32-42 | 27753 | 0 |  |
 | FDA | 2016 | Nuplazid | separate | 218 | 218 | yes | document type | 1-218 | 263251 | 74 |  |
 | FDA | 2017 | Parsabiv | separate | 186 | 186 | yes | document type | 1-186 | 286948 | 30 |  |
 | FDA | 2017 | Austedo | separate | 98 | 98 | yes | document type | 1-98 | 89465 | 38 |  |
-| FDA | 2018 | Biktarvy | multidisc | 435 | 12 | yes | headings | 39-50 | 22650 | 0 |  |
+| FDA | 2018 | Biktarvy | multidisc | 435 | 41 | yes | headings | 1-1,14-15,17-19,39-50,109-121,248-255,434-435 | 85893 | 0 |  |
 | FDA | 2018 | Tegsedi | separate | 134 | 134 | yes | document type | 1-134 | 203208 | 12 |  |
 | FDA | 2019 | Ubrelvy | separate | 52 | 52 | yes | document type | 1-52 | 66756 | 1 |  |
 | FDA | 2019 | Reblozyl | separate | 38 | 38 | yes | document type | 1-38 | 56120 | 4 |  |
-| FDA | 2020 | Pizensy | multidisc | 150 | 8 | yes | headings | 30-37 | 16718 | 0 |  |
-| FDA | 2020 | Pemazyre | multidisc | 202 | 32 | yes | bookmarks | 33-64 | 72303 | 0 |  |
-| FDA | 2021 | Qulipta | integrated | 280 | 1 | yes | headings | 34-34 | 3092 | 0 | short |
-| FDA | 2021 | Welireg | multidisc | 255 | 1 | yes | headings | 201-201 | 1292 | 0 | short |
-| FDA | 2022 | Vonjo | integrated | 292 | 3 | yes | bookmarks | 37-39 | 9901 | 0 |  |
+| FDA | 2020 | Pizensy | multidisc | 150 | 27 | yes | headings | 1-1,9-9,30-37,111-127 | 55613 | 0 |  |
+| FDA | 2020 | Pemazyre | multidisc | 202 | 65 | yes | bookmarks | 4-4,6-6,10-10,33-64,169-198 | 123140 | 0 |  |
+| FDA | 2021 | Qulipta | integrated | 280 | 101 | yes | headings | 23-30,34-34,66-122,206-206,237-270 | 251545 | 4 |  |
+| FDA | 2021 | Welireg | multidisc | 255 | 52 | yes | headings | 1-1,12-12,32-46,195-199,201-201,223-251 | 101183 | 0 |  |
+| FDA | 2022 | Vonjo | integrated | 292 | 6 | yes | bookmarks | 37-39,70-72 | 18507 | 0 |  |
 | FDA | 2022 | Vabysmo | separate | 53 | 53 | yes | document type | 1-53 | 88251 | 2 |  |
-| FDA | 2023 | Columvi | multidisc | 322 | 31 | yes | headings | 40-70 | 62266 | 0 |  |
-| FDA | 2023 | Pombiliti | integrated | 315 | 1 | yes | headings | 48-48 | 2016 | 0 | short |
+| FDA | 2023 | Columvi | multidisc | 322 | 39 | yes | headings | 1-1,16-18,40-70,215-216,319-320 | 73536 | 0 |  |
+| FDA | 2023 | Pombiliti | integrated | 315 | 83 | yes | headings | 23-36,48-48,77-139,300-300,304-305,310-311 | 188740 | 10 |  |
 | FDA | 2024 | Lumisight | multidisc | 145 | 21 | yes | bookmarks | 28-48 | 46710 | 0 |  |
-| FDA | 2024 | Letybo | multidisc | 107 | 5 | yes | bookmarks | 38-42 | 11813 | 0 |  |
-| FDA | 2025 | Voyxact | integrated | 218 | 3 | yes | bookmarks | 35-37 | 7017 | 0 |  |
-| FDA | 2025 | Jascayd | integrated | 419 | 3 | yes | bookmarks | 36-38 | 6546 | 0 |  |
-| FDA | 2026 | Zenbexus | multidisc | 329 | 53 | yes | bookmarks | 45-97 | 61785 | 31 |  |
-| FDA | 2026 | Utebzi | integrated | 484 | 5 | yes | bookmarks | 58-62 | 14417 | 0 |  |
+| FDA | 2024 | Letybo | multidisc | 107 | 7 | yes | bookmarks | 38-42,103-104 | 13272 | 0 |  |
+| FDA | 2025 | Voyxact | integrated | 218 | 5 | yes | bookmarks | 35-37,65-66 | 10276 | 1 |  |
+| FDA | 2025 | Jascayd | integrated | 419 | 5 | yes | bookmarks | 36-38,85-86 | 12464 | 0 |  |
+| FDA | 2026 | Zenbexus | multidisc | 329 | 54 | yes | bookmarks | 45-97,226-226 | 64388 | 31 |  |
+| FDA | 2026 | Utebzi | integrated | 484 | 7 | yes | bookmarks | 58-62,105-106 | 20915 | 0 |  |
 | EMA | 2015 | Xadago | epar | 118 | 17 | yes | headings | 16-32 | 58732 | 0 |  |
 | EMA | 2015 | Entresto | epar | 115 | 15 | yes | bookmarks | 19-33 | 50948 | 0 |  |
 | EMA | 2016 | Rekovelle | epar | 95 | 7 | yes | bookmarks | 17-23 | 25007 | 0 |  |
@@ -349,7 +349,7 @@ Located by bookmarks, else heading-like lines, with the section-title words of `
 | EMA | 2020 | Atectura Breezhaler | epar | 182 | 16 | yes | bookmarks | 21-36 | 46870 | 0 |  |
 | EMA | 2021 | Ontozry | epar | 122 | 21 | yes | bookmarks | 19-39 | 60377 | 0 |  |
 | EMA | 2021 | Bimzelx | epar | 220 | 9 | yes | bookmarks | 21-29 | 31713 | 0 |  |
-| EMA | 2022 | Tecovirimat SIGA | epar | 128 | 17 | yes | headings | 21-37 | 58937 | 1 |  |
+| EMA | 2022 | Tecovirimat SIGA | epar | 128 | 45 | yes | headings | 6-10,21-37,79-101 | 123767 | 1 |  |
 | EMA | 2022 | Filsuvez | epar | 162 | 12 | yes | headings | 18-29 | 41885 | 0 |  |
 | EMA | 2023 | Litfulo | epar | 191 | 42 | yes | bookmarks | 25-66 | 167173 | 0 |  |
 | EMA | 2023 | Vanflyta | epar | 130 | 15 | yes | bookmarks | 21-35 | 54914 | 0 |  |
@@ -377,7 +377,7 @@ Documents by basis:
 | document type | 9 | 19 % |
 | headings | 12 | 25 % |
 
-FDA: median section 26 of 218 pages; sections of integrated/multidisc/epar documents (excluding whole-document cases): median 5 pages.
+FDA: median section 52 of 218 pages; sections of integrated/multidisc/epar documents (excluding whole-document cases): median 27 pages.
 
 EMA: median section 14 of 140 pages; sections of integrated/multidisc/epar documents (excluding whole-document cases): median 14 pages.
 
@@ -387,30 +387,30 @@ Tokens = characters / 4, over the located section only (whole document when not 
 
 | Authority | Documents | Median chars per text page (imputation) | Input tokens | Approx. +-2 SE |
 |---|---|---|---|---|
-| FDA | 541 | 2012 | 14.3 M | 5.3-23.3 M |
-| EMA (unit yes) | 453 | 3394 | 6.4 M | 4.9-7.8 M |
-| EMA (yes + unknown) | 506 | 3394 | 7.1 M | 5.6-8.7 M |
-| EMA (all B with EPAR) | 567 | 3394 | 7.9 M | 6.1-9.6 M |
+| FDA | 541 | 1921 | 19.0 M | 10.6-27.4 M |
+| EMA (unit yes) | 453 | 3297 | 6.8 M | 5.2-8.4 M |
+| EMA (yes + unknown) | 506 | 3297 | 7.6 M | 5.9-9.4 M |
+| EMA (all B with EPAR) | 567 | 3297 | 8.4 M | 6.4-10.3 M |
 
-FDA plus EMA (unit yes): 20.7 M input tokens.
+FDA plus EMA (unit yes): 25.8 M input tokens.
 
-Claude API list prices, USD per million tokens (source: https://platform.claude.com/docs/en/about-claude/pricing and https://claude.com/pricing, fetched 2026-10-23). Haiku 5.5 is priced by prompt length (0.10 up to 100,000 tokens per prompt; 0.50 above). The largest sampled section (low-text pages imputed) is 163494 tokens, above that threshold, so the Haiku figure is a lower bound. Batch processing is 50 % cheaper on the same page.
+Claude API list prices, USD per million tokens (source: https://platform.claude.com/docs/en/about-claude/pricing and https://claude.com/pricing, fetched 2026-10-23). Haiku 5.5 is priced by prompt length (0.10 up to 100,000 tokens per prompt; 0.50 above). The largest sampled section (low-text pages imputed) is 158559 tokens, above that threshold, so the Haiku figure is a lower bound. Batch processing is 50 % cheaper on the same page.
 
 | Model | Input USD/MTok | FDA USD | EMA USD | Total USD | Total USD, batch |
 |---|---|---|---|---|---|
-| Haiku 5.5 | 0.10 | 1 | 1 | 2 | 1 |
-| Sonnet 5.5 | 2.00 | 29 | 13 | 41 | 21 |
-| Opus 5.5 | 4.00 | 57 | 25 | 83 | 41 |
+| Haiku 5.5 | 0.10 | 2 | 1 | 3 | 1 |
+| Sonnet 5.5 | 2.00 | 38 | 14 | 52 | 26 |
+| Opus 5.5 | 4.00 | 76 | 27 | 103 | 52 |
 
 Input only. Output tokens (the extracted findings and quotes) and the instruction text per request are not included; output costs 0.50/10.00/20.00 USD/MTok for Haiku/Sonnet/Opus respectively, so a few findings per drug add little next to the input.
 
-Claude Code Pro: the pricing page states that Claude Code is included in Pro, shares the plan's usage limits, that limits reset on a rolling five-hour window, and that there is no fixed message count. **No token quota per session is published, so the number of sessions cannot be derived from a source.** Under assumed capacities (assumptions, not facts) the total input of 20.7 M tokens would need:
+Claude Code Pro: the pricing page states that Claude Code is included in Pro, shares the plan's usage limits, that limits reset on a rolling five-hour window, and that there is no fixed message count. **No token quota per session is published, so the number of sessions cannot be derived from a source.** Under assumed capacities (assumptions, not facts) the total input of 25.8 M tokens would need:
 
 | Assumed input tokens per five-hour session | Sessions |
 |---|---|
-| 1 M | 21 |
-| 3 M | 7 |
-| 10 M | 2 |
+| 1 M | 26 |
+| 3 M | 9 |
+| 10 M | 3 |
 
 ## OCR scope (PREREG v3 c)
 
@@ -424,11 +424,11 @@ Pages below the text-layer threshold (100 characters), measured in the stratifie
 | FDA | 2018 | 59 | 284 | 2 % | 354 | 354 |
 | FDA | 2019 | 46 | 45 | 6 % | 115 | 115 |
 | FDA | 2020 | 52 | 176 | 0 % | 0 | 0 |
-| FDA | 2021 | 49 | 268 | 5 % | 637 | 0 |
+| FDA | 2021 | 49 | 268 | 5 % | 637 | 98 |
 | FDA | 2022 | 36 | 172 | 1 % | 90 | 36 |
-| FDA | 2023 | 55 | 318 | 5 % | 852 | 0 |
+| FDA | 2023 | 55 | 318 | 5 % | 852 | 275 |
 | FDA | 2024 | 50 | 126 | 2 % | 100 | 0 |
-| FDA | 2025 | 46 | 318 | 1 % | 184 | 0 |
+| FDA | 2025 | 46 | 318 | 1 % | 184 | 23 |
 | FDA | 2026 | 38 | 406 | 21 % | 3287 | 589 |
 | EMA | 2015 | 42 | 116 | 0 % | 21 | 0 |
 | EMA | 2016 | 28 | 118 | 2 % | 56 | 0 |
@@ -445,7 +445,7 @@ Pages below the text-layer threshold (100 characters), measured in the stratifie
 
 | Authority | Whole: pages | Whole: approx. +-2 SE | Section: pages | Section: approx. +-2 SE |
 |---|---|---|---|---|
-| FDA | 14654 | 2304-27003 | 9919 | -734-20572 |
+| FDA | 14654 | 2304-27003 | 10315 | -286-20916 |
 | EMA | 1202 | 730-1675 | 114 | -41-268 |
 
 Scope is the OCR load if layer 1 is applied first (Section) or not (Whole). Pages inside the section of a document whose section was not found count as the whole document.

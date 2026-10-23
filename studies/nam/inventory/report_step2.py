@@ -151,22 +151,25 @@ def ema_unit_section(w, recs, cc):
 def layer1_section(w, recs):
     w("## Layer 1: non-clinical section of the sample (PREREG v3 b)\n")
     w("Located by bookmarks, else heading-like lines, with the section-title words of "
-      "`outline.py`; a numbered match beats an unnumbered one (cover and signature "
-      "pages carry unnumbered matches; added after a first run, from page numbers "
-      "only). Separate non-clinical reviews are the section as a whole. Characters "
-      "are counted with whitespace folded. 'Low' = pages in the section below the "
-      "text-layer threshold (%d characters). Short sections (under 3 pages) are "
-      "marked: they may be right (integrated reviews are brief) or a heading found "
-      "next to its successor; they are not corrected and should be checked by page "
-      "number.\n" % measure.TEXT_LAYER_MIN_CHARS)
+      "`outline.py`. One rule for every format: the section is the union of all "
+      "title matches (table of contents lines and bookmark titles over 90 characters "
+      "do not count), each ended by the next heading at the same or a higher level "
+      "(a sub-heading does not end it); overlapping ranges are merged. Separate "
+      "non-clinical reviews are the section as a whole. Characters are counted with "
+      "whitespace folded. 'Low' = pages in the section below the text-layer threshold "
+      "(%d characters). Sections under 3 pages are marked 'short' and should be "
+      "checked by page number. Integrated Reviews keep a short non-clinical summary "
+      "in the main body and the detailed non-clinical assessment in a later "
+      "section or appendix, which is why the union is used.\n"
+      % measure.TEXT_LAYER_MIN_CHARS)
     label = {"pharmtox": "separate"}
     rows = [[r["authority"], r["year"], r["name"], label.get(r["format"], r["format"]),
              r["pages"], r["section_pages"], "yes" if r["found"] else "no", r["basis"],
-             "%d-%d" % (r["start"], r["end"]), r["chars"], r["low_text_pages"],
+             ",".join("%d-%d" % tuple(x) for x in r["ranges"]), r["chars"], r["low_text_pages"],
              "short" if r["section_pages"] < 3 and r["basis"] != "document type" else ""]
             for r in recs]
     w(table(["Authority", "Year", "Drug", "Format", "Pages", "Section pages", "Found",
-             "Basis", "Pages (from-to)", "Characters", "Low", "Flag"], rows))
+             "Basis", "Page ranges", "Characters", "Low", "Flag"], rows))
     fmt = section.found_share([dict(r, format=label.get(r["format"], r["format"]))
                                for r in recs], "format")
     bas = section.found_share(recs, "basis")

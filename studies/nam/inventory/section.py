@@ -6,21 +6,24 @@ non-clinical section as a whole. If the section cannot be located, the whole
 document is passed on and logged (PREREG v3 b). Only page numbers and
 character counts leave this module; no text is printed or stored.
 
-Rules (fixed before the run; the numbered-first preference was added after
-a first run showed that unnumbered matches are mostly cover and signature
-pages, using page numbers and counts only):
- - Among matches, a numbered one beats an unnumbered one, then the shallowest
-   level (fewest number parts), then the earliest.
- - Bookmarks: start = the preferred bookmark with a title word; end = page of the next bookmark at the same or a
-   shallower level (that page is included), else the last page.
- - Headings: start = first heading-like line (<= 90 characters, not a table
-   of contents line) with a title word; end = page of the first later
-   numbered heading that is a sibling or ancestor successor of a numbered
-   start (higher number, no deeper, first number at most one higher), or for
-   an unnumbered start the first later heading beginning with "Clinical";
-   else the last page.
+Rule (one rule for every format, fixed before the rerun; it replaces the
+numbered-first choice of the first run, which could pick a labelling line
+instead of the section, and a one-page sub-heading in Integrated Reviews):
+ - The section is the union of every match of the section-title words. Table
+   of contents lines never count.
+ - Bookmarks: each matching bookmark (title of at most 90 characters, as for
+   headings; a long title that merely lists review types or is a sentence is
+   not a section title) runs from its page to the page of the
+   next bookmark at the same or a shallower level (that page is included),
+   else to the last page.
+ - Headings: each heading-like line (<= 90 characters) with a title word runs
+   from its page to the page of the first later numbered heading at the same
+   or a higher level (higher number, first number at most one higher); a
+   sub-heading never ends it. For an unnumbered match the end is the first
+   later heading beginning with "Clinical". Else the last page.
  - Formats "separate" and "pharmtox" (a separate non-clinical review) are the
-   section as a whole.
+   section as a whole: the document is the non-clinical review.
+Overlapping and adjacent ranges are merged.
 
 Usage: NAM_DATA=... python -I -m studies.nam.inventory.section
 """
@@ -36,7 +39,6 @@ from .fetch import Fetcher
 _TOKEN = re.compile(r'<(/?)outline>|<item[^>]*?page="(\d+)"[^>]*>(.*?)</item>', re.S)
 _NUMBER = re.compile(r"^\s*(\d+(?:\.\d+)*)\.?\s+\S")
 _CLINICAL = re.compile(r"^\s*(?:\d+(?:\.\d+)*\.?\s+)?clinical\b", re.I)
-_TITLE_NUMBER = re.compile(r"^\s*\d+(?:\.\d+)*\.?\s")
 WHOLE_DOCUMENT = ("separate", "pharmtox")
 _TOC_LINE = re.compile(r"\.{4,}|(?:\.\s){3,}|\s\d{1,4}\s*$")
 
@@ -53,27 +55,47 @@ def parse_outline(xml):
     return items
 
 
+def merge(ranges):
+    """Sorted, overlapping or adjacent (start, end) ranges merged."""
+    out = []
+    for lo, hi in sorted(ranges):
+        if out and lo <= out[-1][1] + 1:
+            out[-1] = (out[-1][0], max(out[-1][1], hi))
+        else:
+            out.append((lo, hi))
+    return out
+
+
 def from_bookmarks(items, n_pages):
-    """(start, end, n_matches) or None."""
-    hits = [i for i, (_, _, t) in enumerate(items) if outline.title_matches(t)]
+    """([(start, end)], n_matches) or None."""
+    hits = [i for i, (_, _, t) in enumerate(items)
+            if len(t) <= outline.MAX_HEADING_LEN and outline.title_matches(t)]
     if not hits:
         return None
-    first = min(hits, key=lambda i: (
-        0 if _TITLE_NUMBER.match(items[i][2]) else 1, items[i][0], i))
-    level, start = items[first][0], items[first][1]
-    end = n_pages
-    for lvl, page, _ in items[first + 1:]:
-        if lvl <= level:
-            end = page
-            break
-    if end < start:
+    ranges = []
+    for first in hits:
+        level, start = items[first][0], items[first][1]
         end = n_pages
-    return start, min(max(end, start), n_pages), len(hits)
+        for lvl, page, _ in items[first + 1:]:
+            if lvl <= level:
+                end = page
+                break
+        if end < start:
+            end = n_pages
+        ranges.append((start, min(max(end, start), n_pages)))
+    return merge(ranges), len(hits)
 
 
 def _number(line):
     m = _NUMBER.match(line)
     return tuple(int(x) for x in m.group(1).split(".")) if m else None
+
+
+def _ends(num, cand):
+    """A numbered heading cand ends a section that starts at num: later, at the
+    same or a higher level, first number at most one higher."""
+    return (cand is not None and len(cand) <= len(num) and cand > num
+            and cand[0] <= num[0] + 1)
 
 
 def _heading_lines(pages):
@@ -87,47 +109,46 @@ def _heading_lines(pages):
 
 
 def from_headings(pages):
-    """(start, end, n_matches) or None."""
+    """([(start, end)], n_matches) or None."""
     lines = _heading_lines(pages)
     hits = [i for i, (_, ln) in enumerate(lines)
             if outline._HEADING.match(ln) and not _TOC_LINE.search(ln)]
     if not hits:
         return None
-    first = min(hits, key=lambda i: (
-        0 if _number(lines[i][1]) else 1, len(_number(lines[i][1]) or ()), i))
-    start, line = lines[first]
-    num = _number(line)
-    end = len(pages)
-    for pno, ln in lines[first + 1:]:
-        if _TOC_LINE.search(ln):
-            continue
-        if num is None:
-            ok = bool(_CLINICAL.match(ln))
-        else:
-            cand = _number(ln)
-            ok = (cand is not None and len(cand) <= len(num) and cand > num
-                  and cand[0] <= num[0] + 1)
-        if ok:
-            end = pno
-            break
-    return start, min(max(end, start), len(pages)), len(hits)
+    ranges = []
+    for first in hits:
+        start, line = lines[first]
+        num = _number(line)
+        end = len(pages)
+        for pno, ln in lines[first + 1:]:
+            if _TOC_LINE.search(ln):
+                continue
+            ok = bool(_CLINICAL.match(ln)) if num is None else _ends(num, _number(ln))
+            if ok:
+                end = pno
+                break
+        ranges.append((start, min(max(end, start), len(pages))))
+    return merge(ranges), len(hits)
 
 
 def locate(fmt, xml, pages):
-    """Return dict(found, basis, start, end, n_matches)."""
+    """Return dict(found, basis, ranges, start, end, n_matches); start and end
+    are the first and last page of the ranges."""
     n = len(pages)
     if fmt in WHOLE_DOCUMENT:
-        return {"found": True, "basis": "document type", "start": 1, "end": n,
-                "n_matches": 0}
+        return _loc(True, "document type", [(1, n)], 0)
     tries = [("bookmarks", lambda: from_bookmarks(parse_outline(xml), n)),
              ("headings", lambda: from_headings(pages))]
     for basis, fn in tries:
         res = fn()
         if res:
-            return {"found": True, "basis": basis, "start": res[0],
-                    "end": res[1], "n_matches": res[2]}
-    return {"found": False, "basis": "not found", "start": 1, "end": n,
-            "n_matches": 0}
+            return _loc(True, basis, res[0], res[1])
+    return _loc(False, "not found", [(1, n)], 0)
+
+
+def _loc(found, basis, ranges, n_matches):
+    return {"found": found, "basis": basis, "ranges": [list(r) for r in ranges],
+            "start": ranges[0][0], "end": ranges[-1][1], "n_matches": n_matches}
 
 
 def page_counts(pages):
@@ -137,10 +158,10 @@ def page_counts(pages):
 
 def summarize(loc, pages, threshold=measure.TEXT_LAYER_MIN_CHARS):
     counts = page_counts(pages)
-    sec = counts[loc["start"] - 1:loc["end"]]
+    sec = [counts[p - 1] for lo, hi in loc["ranges"] for p in range(lo, hi + 1)]
     return {"pages": len(pages), "section_pages": len(sec),
             "found": loc["found"], "basis": loc["basis"],
-            "start": loc["start"], "end": loc["end"],
+            "ranges": loc["ranges"], "start": loc["start"], "end": loc["end"],
             "n_matches": loc["n_matches"],
             "chars": sum(c for c, _ in sec),
             "chars_nonblank": sum(b for _, b in sec),
@@ -155,10 +176,16 @@ def _run(cmd):
     return proc.stdout.decode("utf8", "replace")
 
 
-def analyse_pdf(path, fmt):
+def load_pages(path):
+    """Text per page (1-based page n is element n-1)."""
     pages = _run(["pdftotext", "-enc", "UTF-8", str(path), "-"]).split("\f")
     if pages and pages[-1] == "":
         pages = pages[:-1]
+    return pages
+
+
+def analyse_pdf(path, fmt):
+    pages = load_pages(path)
     xml = ""
     if fmt not in WHOLE_DOCUMENT:
         xml = _run(["pdftohtml", "-xml", "-stdout", "-i", "-q", str(path)])
