@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+data/
+*.pdf
+*.db
+*.sqlite
+*.log
+.env
+CLAUDE.local.md
+out/
