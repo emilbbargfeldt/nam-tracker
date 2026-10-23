@@ -21,3 +21,7 @@ start with "non-" count as the negation "non". The exact path now also
 compares negations in the whitespace-widened span, not only digits. Reason:
 the prefix reverses the meaning in nonclinical texts ("non-toxic" vs
 "toxic").
+
+## 2026-10-23: Phase 0 started before 2026-11-01
+
+Phase 0 started before 2026-11-01. It runs on the Pi only, does not touch the screening chain or the second machine, and sees no outcomes (counts, pages and text-layer only).
