@@ -1,4 +1,5 @@
 import json
+import re
 import shutil
 
 import pytest
@@ -6,25 +7,31 @@ import pytest
 from studies.nam.inventory import epar_nas
 from tests.test_inventory_measure import make_pdf
 
-POS = "The CHMP considered that X is a new active substance."
-NEG = "The CHMP did not consider that X is a new active substance."
-APPLICANT = "The applicant considered that X is a new active substance."
+SINCE = ("Since X is not a constituent of a medicinal product previously "
+         "authorised, the CHMP considers X a new active substance.")
+APPLICANT = "The applicant requested X to be considered as a new active substance."
+KNOWN = "X is a known active substance."
+NEG = "The CHMP considers that X is not a new active substance."
+NO_CHMP = "It is considered that X is a new active substance."
+NO_VERB = "The CHMP listed X among new active substances."
 FOREIGN = "A new active substance is a substance not authorised before."
 
-# (sentence, expected classification)
+# (sentence, expected classification of the sentence)
 CASES = [
-    (POS, "positive"),
+    (SINCE, "positive"),
+    (NO_CHMP, "positive"),
     ("The Committee concluded that X qualifies as a new active substance.",
      "positive"),
-    ("The CHMP, based on the data, is of the opinion that X is to be qualified "
-     "as a new active substance in itself.", "positive"),
     (NEG, "negative"),
-    ("The CHMP concluded that X is not a new active substance.", "negative"),
-    ("The CHMP cannot agree that X is a new active substance.", "negative"),
+    ("X was not considered a new active substance.", "negative"),
     (APPLICANT, None),
+    ("The applicant claimed that X is a new active substance, which the CHMP "
+     "considers correct.", None),
+    ("X was declared a new active substance and agreed so.", None),
+    ("The CHMP indicated that X is considered a new active substance.", None),
     (FOREIGN, None),
-    ("The CHMP discussed the quality of X.", None),
-    ("The CHMP listed X among new active substances.", None),
+    (NO_VERB, None),
+    (KNOWN, None),
 ]
 
 
@@ -38,33 +45,81 @@ def failures():
     return [s for s, want in CASES if epar_nas.classify(s) != want]
 
 
+def verdict_of(*pages):
+    return epar_nas.analyse(list(pages))["verdict"]
+
+
 def test_real_rule_has_no_failures():
     assert failures() == []
 
 
-def test_verdicts():
-    assert epar_nas.analyse([POS])["verdict"] == "yes"
-    assert epar_nas.analyse([NEG])["verdict"] == "no"
-    assert epar_nas.analyse([POS + " " + NEG])["verdict"] == "unknown"
-    assert epar_nas.analyse(["Nothing about it."])["verdict"] == "unknown"
-    assert epar_nas.analyse([APPLICANT])["verdict"] == "unknown"
+def test_the_four_stated_examples():
+    assert verdict_of(SINCE) == "yes"
+    res = epar_nas.analyse([APPLICANT])
+    assert res["matches"] == [] and res["verdict"] == "unknown"
+    assert res["unmatched"] == [{"page": 1, "sentence": 1}]
+    assert verdict_of(KNOWN) == "no"
+    assert verdict_of(NEG) == "no"
+
+
+def test_negation_far_before_the_phrase_is_ignored():
+    # "not" is more than 4 tokens before the phrase
+    assert epar_nas.classify(SINCE) == "positive"
+
+
+def test_known_limitation_negation_more_than_four_tokens_before_is_missed():
+    # Rule v2 as specified: "cannot" is 6 tokens before the phrase. Listed in
+    # docs/KNOWN-LIMITATIONS.md; if the rule changes this test must change.
+    assert epar_nas.classify(
+        "The CHMP cannot agree that X is a new active substance.") == "positive"
+
+
+def test_negation_window_boundary_is_four_tokens():
+    # "not" as the 4th token before the phrase counts, as the 5th it does not
+    assert epar_nas.classify(
+        "It is considered not to be a new active substance.") == "negative"
+    assert epar_nas.classify(
+        "It is considered not to be so a new active substance.") == "positive"
+
+
+def test_negation_just_before_the_phrase_counts():
+    assert epar_nas.classify(
+        "The CHMP considers X no longer a new active substance.") == "negative"
+
+
+def test_last_conclusion_match_wins():
+    assert verdict_of(SINCE, NEG) == "no"
+    assert verdict_of(NEG, SINCE) == "yes"
+    assert verdict_of(SINCE + " " + NEG) == "no"
+
+
+def test_known_signal_with_positive_match_is_unknown():
+    assert verdict_of(KNOWN, SINCE) == "unknown"
+    assert verdict_of(SINCE, KNOWN) == "unknown"
+
+
+def test_known_signal_with_negative_match_is_no():
+    assert verdict_of(KNOWN, NEG) == "no"
+
+
+def test_unknown_when_nothing_matches():
+    assert verdict_of("Nothing about it.") == "unknown"
+    assert verdict_of(FOREIGN) == "unknown"
+
+
+def test_unknown_active_substance_is_not_a_known_signal():
+    assert epar_nas.analyse(["X is an unknown active substance."])["known"] == []
 
 
 def test_positions_are_page_and_sentence_numbers():
     res = epar_nas.analyse(["First one. Second one.",
-                            "Intro. " + FOREIGN + " " + POS])
+                            "Intro. " + KNOWN + " " + SINCE])
     assert res["matches"] == [{"page": 2, "sentence": 3, "polarity": "positive"}]
-    assert res["unmatched"] == [{"page": 2, "sentence": 2}]
-
-
-def test_unmatched_occurrence_is_listed_not_counted():
-    res = epar_nas.analyse([APPLICANT])
-    assert res["matches"] == []
-    assert res["unmatched"] == [{"page": 1, "sentence": 1}]
+    assert res["known"] == [{"page": 2, "sentence": 2}]
 
 
 def test_hyphenation_and_line_breaks_are_joined():
-    text = "The CHMP considered that X is a new ac-\ntive   substance."
+    text = "The CHMP considers X a new ac-\ntive   substance."
     assert epar_nas.classify(epar_nas.split_sentences(text)[0]) == "positive"
 
 
@@ -74,32 +129,62 @@ def test_abbreviation_does_not_split_sentence():
 
 
 def test_result_holds_only_numbers_and_labels():
-    res = epar_nas.analyse(["Secret text. " + POS])
+    res = epar_nas.analyse(["Secret text. " + SINCE + " " + KNOWN])
     blob = json.dumps(res)
-    assert "Secret" not in blob and "CHMP" not in blob
+    assert "Secret" not in blob and "CHMP" not in blob and "constituent" not in blob
 
 
 @pytest.mark.skipif(shutil.which("pdftotext") is None, reason="poppler")
 def test_pdf_end_to_end(tmp_path):
     p = tmp_path / "a.pdf"
-    make_pdf(p, ["Nothing here.", "Intro. The CHMP considered X a new active substance."])
+    make_pdf(p, ["Nothing here.", "Intro. The CHMP considers X a new active substance."])
     res = epar_nas.analyse(epar_nas.pdf_pages(p))
     assert res["verdict"] == "yes"
     assert res["matches"] == [{"page": 2, "sentence": 2, "polarity": "positive"}]
 
 
 # Deliberate faults: the known-answer cases must catch each one.
-def test_mutant_without_chmp_requirement_is_caught(monkeypatch):
-    monkeypatch.setattr(epar_nas, "_has_chmp", lambda s: True)
+def test_mutant_without_applicant_filter_is_caught(monkeypatch):
+    monkeypatch.setattr(epar_nas, "_from_applicant", lambda s: False)
     assert APPLICANT in failures()
-    assert epar_nas.analyse([APPLICANT])["verdict"] == "yes"  # the harm
-
-
-def test_mutant_ignoring_negation_is_caught(monkeypatch):
-    monkeypatch.setattr(epar_nas, "_negated", lambda s, pos: False)
-    assert NEG in failures()
+    assert verdict_of(APPLICANT) == "yes"  # the harm
 
 
 def test_mutant_without_verb_requirement_is_caught(monkeypatch):
     monkeypatch.setattr(epar_nas, "_has_verb", lambda s: True)
-    assert "The CHMP listed X among new active substances." in failures()
+    assert NO_VERB in failures()
+
+
+def test_mutant_negation_anywhere_before_is_caught(monkeypatch):
+    monkeypatch.setattr(epar_nas, "NEAR_TOKENS", 1000)
+    assert SINCE in failures()
+    assert verdict_of(SINCE) == "no"  # the harm
+
+
+def test_mutant_negation_ignored_is_caught(monkeypatch):
+    monkeypatch.setattr(epar_nas, "_negated", lambda s, pos: False)
+    assert NEG in failures()
+
+
+def test_mutant_without_known_signal_is_caught(monkeypatch):
+    monkeypatch.setattr(epar_nas, "_KNOWN", re.compile(r"(?!x)x"))
+    assert verdict_of(KNOWN) == "unknown"  # should be "no"
+    assert verdict_of(KNOWN, SINCE) == "yes"  # should be "unknown"
+
+
+def test_mutant_first_match_wins_is_caught(monkeypatch):
+    def first_wins(matches, known):
+        if not matches:
+            return "no" if known else "unknown"
+        return "yes" if matches[0]["polarity"] == "positive" else "no"
+    monkeypatch.setattr(epar_nas, "verdict", first_wins)
+    assert verdict_of(SINCE, NEG) == "yes"  # should be "no"
+
+
+def test_mutant_known_does_not_override_positive_is_caught(monkeypatch):
+    def no_override(matches, known):
+        if matches:
+            return "yes" if matches[-1]["polarity"] == "positive" else "no"
+        return "no" if known else "unknown"
+    monkeypatch.setattr(epar_nas, "verdict", no_override)
+    assert verdict_of(KNOWN, SINCE) == "yes"  # should be "unknown"

@@ -87,3 +87,20 @@ above EMA's own counts.
 
 The fetch cap is raised from 2 to 5 GiB for the EPAR reports (disk has 36 GB
 free). Everything stays on the Pi and outside the repository.
+
+## 2026-10-23: EPAR rule version 2 and wider link rule
+
+Rule version 1 left 153 of 568 candidates unknown (27 %), above the 10 % stop
+rule in every year. Diagnostics (booleans and counts only) showed that few
+conclusion sentences name the CHMP, that applicant statements share the
+phrase, and that most negations in conflicting reports stood far from the
+phrase. Version 2 (chosen from those diagnostics and not from agreement with
+EMA's counts, which had not been computed): the CHMP is not required; the
+applicant words (applicant, requested, claim, declared, indicated) exclude a
+sentence; a negation counts only within 4 tokens before the phrase;
+"known active substance" anywhere is a no-signal; the last conclusion match
+decides; a no-signal together with a positive match gives unknown. Link rule:
+the original rule keeps priority; fallback tiers accept the "-0" suffix, names
+without "epar-" or without "public-", and the usual public-assessment-report
+name in another folder; variation reports never count. Of the 11 candidates
+without a link, 10 are found; Evkeeza stays unknown.
