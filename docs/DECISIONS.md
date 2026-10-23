@@ -209,3 +209,50 @@ Extraction on the pilot drugs may run, but the output is saved only in
 number of findings or rejected quotes) until Emil's 15 codings are committed.
 The tool prints only done, skipped or quota per chunk. Reason: the model output
 must not influence the reference coding. The rule is also in `CLAUDE.local.md`.
+
+## 2026-10-23: Model and call: Claude Code headless on Pro, no tools
+
+Extraction uses `claude -p` (Claude Code on the Pro plan, no API key) with the
+model set explicitly to `claude-sonnet-5-5`; the chunk is sent on stdin and the
+answer is read as JSON (`--output-format json`, structured output with
+`--json-schema`). Flags checked against `claude --help` (version 2.1.309): all
+built-in tools off (`--tools ""`), no MCP servers (`--strict-mcp-config`), no
+skills (`--disable-slash-commands`), no settings files (`--setting-sources ""`),
+no saved session (`--no-session-persistence`), the system prompt replaced
+(`--system-prompt`). `--bare` is not used because it switches off the login of
+the Pro plan. The working directory is an empty folder, so no CLAUDE.md is
+read. The model is chosen from the pilot requirements and cost (input list price
+about 0.50 times Opus), not from results; it is a choice for the pilot, and a
+failed pilot may change it (PREREG, accuracy). One smoke call on a made-up
+two-page text confirmed the flags and the answer format: a good structured
+answer has `stop_reason` "tool_use", so success is decided by subtype success,
+no error, terminal reason completed and a `structured_output` with the right
+fields; only `max_tokens` is a cut-off answer.
+
+## 2026-10-23: Extraction input, prompt and quote check
+
+The input is the layer 1 pages with absolute page numbers (`=== Page N ===`).
+The system prompt is fixed reading rules plus the codebook table (A-D and S)
+read verbatim from PREREG.md; its hash is stored. It holds no drug name,
+agency or year. Output is a list of {code, page, quote}. Every finding is
+checked with `core.quotecheck.verify_quote` (0.95) against the page it names
+(code in A-D or S, page inside the chunk, non-empty quote); rejected findings
+are kept in `rejected.jsonl` with the reason and never counted. Text comes from
+the text layer; OCR is not installed, so low-text pages give little text until
+it is (PREREG v3 c).
+
+## 2026-10-23: Chunks, idempotence, errors and logging
+
+Sections are split into chunks of at most 200,000 characters (about 50,000
+tokens at 4 characters per token) with one page of overlap; a page above the
+limit is a chunk of its own. Output per chunk is saved in
+`$NAM_DATA/extract/<prompt hash>/<document>/` and not run again (the chunk text
+hash is stored; a changed text is run again). A call that is cut off, not valid
+JSON, incomplete, malformed or failed is status "error": it is logged, the chunk
+is not saved as done and is run again next time; it never counts as an empty
+list (only a complete answer with an empty list means nothing found). A usage or
+rate limit stops the run with status "quota" and no half file; the run resumes
+where it stopped. Per call `calls.jsonl` has time, document, chunk, model, Claude
+Code version, prompt hash, chunk hash, tokens (usage), model time, wall time,
+status and the error class. Duplicates from the overlap are removed on (code,
+page, quote).
