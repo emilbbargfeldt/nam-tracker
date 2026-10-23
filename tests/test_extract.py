@@ -335,3 +335,8 @@ def test_call_claude_timeout_is_an_error(tmp_path):
         raise subprocess.TimeoutExpired(argv, 1)
     with pytest.raises(cli.CallError):
         cli.call_claude("x", tmp_path, run=fake_run)
+
+
+def test_main_refuses_without_blind_flag(capsys):
+    assert run.main([]) == 2
+    assert "--blind" in capsys.readouterr().out

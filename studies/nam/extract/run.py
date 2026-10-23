@@ -7,7 +7,9 @@ Every finding must pass core.quotecheck.verify_quote (0.95) against the page it
 names; the others are kept as rejected. For pilot drugs nothing is shown or
 counted (see DECISIONS, blinding): only done, skipped, quota or error per chunk.
 
-Usage: NAM_DATA=... python -I -m studies.nam.extract.run   (reads pilot.json)
+Usage: NAM_DATA=... python -I -m studies.nam.extract.run --blind   (reads pilot.json)
+The flag is required: pilot output is blinded and only done, skipped, quota or
+error is printed per chunk.
 """
 import json
 import os
@@ -141,7 +143,10 @@ def prepare_document(path, fmt, ocr_dir, run=ocr.subprocess.run):
     return pages, numbers, info
 
 
-def main():
+def main(argv=None):
+    if "--blind" not in (sys.argv[1:] if argv is None else argv):
+        print("pilot extraction must run with --blind (see DECISIONS, blinding)")
+        return 2
     from studies.nam.inventory.fetch import Fetcher
     from studies.nam.inventory.fetch_tocs import get_with_retry
     from studies.nam.pilot import draw

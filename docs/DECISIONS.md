@@ -301,3 +301,13 @@ OCR command is never stored as an empty page; an empty result for a blank page
 is valid. Tests use a mocked `pdftoppm` and `tesseract` and a mutant (OCR not
 applied, missing tesseract ignored); one test with the real tools is skipped
 until tesseract is installed.
+
+## 2026-10-23: OCR run on the pilot drugs (numbers only)
+
+Tesseract 5.5.0 (English) was installed and the test with the real tools
+passes. OCR of the layer 1 pages below 100 characters of the 30 pilot drugs:
+137 pages, 132 replaced by OCR text, 7 still below 100 characters after OCR
+(Praxbind 3, Strensiq 1, Palynziq 1, Accrufer 1, Izervay 1; all other drugs
+0). The 7 were not read; they may be blank or nearly blank pages. Emil's PDFs
+are page images and do not change with OCR. Pilot extraction requires the flag
+`--blind`; without it the tool stops.
