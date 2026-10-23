@@ -52,14 +52,26 @@ def appl_no_from_links(links):
     return None
 
 
+_CELL_TABLE = re.compile(
+    r"(<t[dh][^>]*>(?:(?!</t[dh]>|<table).)*?)"
+    r"(<table(?:(?!<table|</table>).)*</table>)", re.S | re.I)
+_STRUCT = re.compile(r"</?(?:table|tbody|thead|tr|td|th)\b[^>]*>", re.I)
+
+
+def _flatten_nested(page):
+    """Replace a table inside a cell by its content, keeping text and links."""
+    return _CELL_TABLE.sub(lambda m: m.group(1) + _STRUCT.sub(" ", m.group(2)), page)
+
+
 def parse_novel_page(page):
     """Parse one yearly novel-approvals page into a list of dicts."""
+    page = _flatten_nested(page)
     rows = []
     for tr in _ROW.findall(page):
         cells = _CELL.findall(tr)
         if len(cells) < 4:
             continue
-        no = _text(cells[0]).rstrip(".")
+        no = _text(cells[0]).rstrip(".,")
         if not no.isdigit():
             continue
         date = _text(cells[3])

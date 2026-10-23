@@ -21,7 +21,9 @@ FLAG_TO_CATEGORY = {
 STRICT = ("pharmtox", "multidisc")
 
 _BLOCK = re.compile(r"var\s+pdfFiles\s*=\s*\{(.*?)\}\s*;", re.S)
-_FLAG = re.compile(r"^\s*(\w+)\s*:\s*([01])\s*,?\s*$", re.M)
+_FLAG = re.compile(r"(?<![\w.])(\w+)\s*:\s*([01])(?=\s*[,}\s])")
+_BLOCK_COMMENT = re.compile(r"/\*.*?\*/", re.S)
+_COMMENT = re.compile(r"(?<![:\w/])//[^\n]*")
 
 
 class TocParseError(ValueError):
@@ -33,7 +35,12 @@ def parse_flags(page):
     block = _BLOCK.search(page)
     if not block:
         raise TocParseError("no pdfFiles block")
-    flags = {k: int(v) for k, v in _FLAG.findall(block.group(1))}
+    body = _COMMENT.sub("", _BLOCK_COMMENT.sub("", block.group(1)))
+    flags = {}
+    for k, v in _FLAG.findall(body):
+        if k in flags and flags[k] != int(v):
+            raise TocParseError("conflicting duplicate flag %s" % k)
+        flags[k] = int(v)
     missing = [f for f in FLAG_TO_CATEGORY if f not in flags]
     if missing:
         raise TocParseError("flags missing: %s" % ", ".join(missing))

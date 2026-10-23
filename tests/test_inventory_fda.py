@@ -129,3 +129,50 @@ def test_validate_page_flags_empty_gaps_and_duplicates():
 def test_regex_priority_varapplno_first():
     links = ["https://x/label/2020/222222Orig1s000lbl.pdf", "x?varApplNo=111111"]
     assert fda.appl_no_from_links(links) == "111111"
+
+
+def test_several_flags_per_line_and_comments():
+    page = ("var pdfFiles = {\napprov: 1, lbl: 1, pharmR: 1,\n"
+            "integratedR: 0, // pharmR: 0\nmultidisciplineR: 0\n};")
+    flags = parse_flags(page)
+    assert flags["pharmR"] == 1 and flags["integratedR"] == 0
+
+
+def test_nested_table_in_ingredient_cell_keeps_row():
+    page = ('<table><tr><td>1.</td><td><a href="x?varApplNo=111111">A</a></td>'
+            '<td> <table><tbody><tr><td> <p>ing-x</p> </td> </tr></tbody></table></td>'
+            '<td>12/21/2020</td><td>use</td></tr></table>')
+    rows = fda.parse_novel_page(page)
+    assert len(rows) == 1
+    assert rows[0]["ingredient"] == "ing-x" and rows[0]["appl_no"] == "111111"
+    assert rows[0]["approved"] == date(2020, 12, 21)
+
+
+def test_row_number_with_comma_typo_is_kept():
+    page = ('<table><tr><td>23,</td><td>A</td><td>x</td><td>6/11/2020</td>'
+            '<td>u</td></tr></table>')
+    assert [r["no"] for r in fda.parse_novel_page(page)] == [23]
+
+
+def test_nested_table_with_link_and_text_keeps_link():
+    page = ('<table><tr><td>1.</td><td>A</td><td>pre <table><tbody><tr><td>'
+            '<a href="x?varApplNo=111111">l</a></td></tr></tbody></table> post</td>'
+            '<td>1/2/2020</td><td>u</td></tr>'
+            '<tr><td>2.</td><td>B</td><td>y</td><td>1/3/2020</td><td>u</td></tr></table>')
+    rows = fda.parse_novel_page(page)
+    assert [r["no"] for r in rows] == [1, 2]
+
+
+def test_flag_regex_ignores_comments_urls_and_decimals():
+    page = ("var pdfFiles = {\n"
+            "pharmR: 1, /* integratedR: 1 */ integratedR: 0,\n"
+            "multidisciplineR: 0, // note http://x pharmR: 0\n"
+            "ratio: 1.5\n};")
+    flags = parse_flags(page)
+    assert flags["pharmR"] == 1 and flags["integratedR"] == 0
+    assert "ratio" not in flags
+
+
+def test_conflicting_duplicate_flag_is_error():
+    with pytest.raises(TocParseError):
+        parse_flags("var pdfFiles = {\npharmR: 1, pharmR: 0,\nintegratedR: 0,\nmultidisciplineR: 0\n};")

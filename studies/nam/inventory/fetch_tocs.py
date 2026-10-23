@@ -5,6 +5,7 @@ Only the TOC pages are fetched; documents are not opened. Usage:
 """
 import sys
 import time
+import zipfile
 import urllib.error
 
 from . import fda
@@ -40,11 +41,15 @@ def main():
     types = {t["ApplicationDocsType_Lookup_ID"]: t["ApplicationDocsType_Lookup_Description"]
              for t in data["doctypes"]}
     assert types["3"] == "Review", "doc type 3 is not Review"
+    zf = zipfile.ZipFile(get_with_retry(f, fda.DATAFILES_URL))
+    products = fda.read_tsv(zf, "Products.txt")
     novel = set()
     for year in range(fda.FIRST_YEAR, fda.LAST_YEAR + 1):
         page = get_with_retry(f, fda.year_url(year)).read_bytes()
         page = fda.decode_body(page)
-        novel |= {r["appl_no"] for r in fda.parse_novel_page(page) if r["appl_no"]}
+        rows = fda.resolve_rows(fda.parse_novel_page(page), year, products,
+                                data["applications"], data["submissions"])
+        novel |= {r["appl_no"] for r in rows if r["appl_no"]}
     failed = []
     for url in toc_urls(novel, data["docs"]):
         try:
