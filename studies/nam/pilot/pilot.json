@@ -1,0 +1,284 @@
+{
+ "seed": 20261101,
+ "rule": "sorted candidates shuffled with random.Random(seed); take in order while the quotas stay reachable; FDA candidates without a document are skipped",
+ "quotas": {
+  "EMA": 10,
+  "FDA": 10,
+  "after_2022": 10
+ },
+ "coder_rule": "derived seed '20261101|coder', at least 5 EMA and 5 FDA",
+ "candidates": 994,
+ "skipped": [],
+ "items": [
+  {
+   "id": "https://www.ema.europa.eu/en/medicines/human/EPAR/ravicti",
+   "authority": "EMA",
+   "name": "Ravicti",
+   "year": 2015,
+   "url": "https://www.ema.europa.eu/en/documents/assessment-report/ravicti-epar-public-assessment-report_en.pdf",
+   "format": "epar",
+   "coder": true
+  },
+  {
+   "id": "https://www.ema.europa.eu/en/medicines/human/EPAR/viekirax",
+   "authority": "EMA",
+   "name": "Viekirax",
+   "year": 2015,
+   "url": "https://www.ema.europa.eu/en/documents/assessment-report/viekirax-epar-public-assessment-report_en.pdf",
+   "format": "epar",
+   "coder": true
+  },
+  {
+   "id": "https://www.ema.europa.eu/en/medicines/human/EPAR/idelvion",
+   "authority": "EMA",
+   "name": "Idelvion",
+   "year": 2016,
+   "url": "https://www.ema.europa.eu/en/documents/assessment-report/idelvion-epar-public-assessment-report_en.pdf",
+   "format": "epar",
+   "coder": false
+  },
+  {
+   "id": "https://www.ema.europa.eu/en/medicines/human/EPAR/reagila",
+   "authority": "EMA",
+   "name": "Reagila",
+   "year": 2017,
+   "url": "https://www.ema.europa.eu/en/documents/assessment-report/reagila-epar-public-assessment-report_en.pdf",
+   "format": "epar",
+   "coder": false
+  },
+  {
+   "id": "https://www.ema.europa.eu/en/medicines/human/EPAR/refixia",
+   "authority": "EMA",
+   "name": "Refixia",
+   "year": 2017,
+   "url": "https://www.ema.europa.eu/en/documents/assessment-report/refixia-epar-public-assessment-report_en.pdf",
+   "format": "epar",
+   "coder": false
+  },
+  {
+   "id": "https://www.ema.europa.eu/en/medicines/human/EPAR/ondexxya",
+   "authority": "EMA",
+   "name": "Ondexxya",
+   "year": 2019,
+   "url": "https://www.ema.europa.eu/en/documents/assessment-report/ondexxya-epar-public-assessment-report_en.pdf",
+   "format": "epar",
+   "coder": true
+  },
+  {
+   "id": "https://www.ema.europa.eu/en/medicines/human/EPAR/drovelis",
+   "authority": "EMA",
+   "name": "Drovelis",
+   "year": 2021,
+   "url": "https://www.ema.europa.eu/en/documents/assessment-report/drovelis-epar-public-assessment-report_en.pdf",
+   "format": "epar",
+   "coder": true
+  },
+  {
+   "id": "https://www.ema.europa.eu/en/medicines/human/EPAR/elzonris",
+   "authority": "EMA",
+   "name": "Elzonris",
+   "year": 2021,
+   "url": "https://www.ema.europa.eu/en/documents/assessment-report/elzonris-epar-public-assessment-report_en.pdf",
+   "format": "epar",
+   "coder": true
+  },
+  {
+   "id": "https://www.ema.europa.eu/en/medicines/human/EPAR/jemperli",
+   "authority": "EMA",
+   "name": "Jemperli",
+   "year": 2021,
+   "url": "https://www.ema.europa.eu/en/documents/assessment-report/jemperli-epar-public-assessment-report_en.pdf",
+   "format": "epar",
+   "coder": false
+  },
+  {
+   "id": "https://www.ema.europa.eu/en/medicines/human/EPAR/loargys",
+   "authority": "EMA",
+   "name": "Loargys",
+   "year": 2023,
+   "url": "https://www.ema.europa.eu/en/documents/assessment-report/loargys-epar-public-assessment-report_en.pdf",
+   "format": "epar",
+   "coder": false
+  },
+  {
+   "id": "https://www.ema.europa.eu/en/medicines/human/EPAR/filspari",
+   "authority": "EMA",
+   "name": "Filspari",
+   "year": 2024,
+   "url": "https://www.ema.europa.eu/en/documents/assessment-report/filspari-epar-public-assessment-report_en.pdf",
+   "format": "epar",
+   "coder": true
+  },
+  {
+   "id": "https://www.ema.europa.eu/en/medicines/human/EPAR/beyonttra",
+   "authority": "EMA",
+   "name": "Beyonttra",
+   "year": 2025,
+   "url": "https://www.ema.europa.eu/en/documents/assessment-report/beyonttra-epar-public-assessment-report_en.pdf",
+   "format": "epar",
+   "coder": false
+  },
+  {
+   "id": "https://www.ema.europa.eu/en/medicines/human/EPAR/romvimza",
+   "authority": "EMA",
+   "name": "Romvimza",
+   "year": 2025,
+   "url": "https://www.ema.europa.eu/en/documents/assessment-report/romvimza-epar-public-assessment-report_en.pdf",
+   "format": "epar",
+   "coder": false
+  },
+  {
+   "id": "761025",
+   "authority": "FDA",
+   "name": "Praxbind",
+   "year": 2015,
+   "url": "http://www.accessdata.fda.gov/drugsatfda_docs/nda/2015/761025Orig1s000PharmR.pdf",
+   "format": "pharmtox",
+   "coder": false
+  },
+  {
+   "id": "125513",
+   "authority": "FDA",
+   "name": "Strensiq",
+   "year": 2015,
+   "url": "http://www.accessdata.fda.gov/drugsatfda_docs/nda/2015/125513Orig1s000PharmR.pdf",
+   "format": "pharmtox",
+   "coder": false
+  },
+  {
+   "id": "210238",
+   "authority": "FDA",
+   "name": "Doptelet",
+   "year": 2018,
+   "url": "http://www.accessdata.fda.gov/drugsatfda_docs/nda/2018/210238Orig1s000MultidisciplineR.pdf",
+   "format": "multidisc",
+   "coder": false
+  },
+  {
+   "id": "761079",
+   "authority": "FDA",
+   "name": "Palynziq",
+   "year": 2018,
+   "url": "http://www.accessdata.fda.gov/drugsatfda_docs/nda/2018/761079Orig1s000MultidisciplineR.pdf",
+   "format": "multidisc",
+   "coder": true
+  },
+  {
+   "id": "211109",
+   "authority": "FDA",
+   "name": "Xerava",
+   "year": 2018,
+   "url": "http://www.accessdata.fda.gov/drugsatfda_docs/nda/2018/211109Orig1s000MultidisciplineR.pdf",
+   "format": "multidisc",
+   "coder": true
+  },
+  {
+   "id": "212320",
+   "authority": "FDA",
+   "name": "Accrufer",
+   "year": 2019,
+   "url": "http://www.accessdata.fda.gov/drugsatfda_docs/nda/2019/212320Orig1s000MultidisciplineR.pdf",
+   "format": "multidisc",
+   "coder": false
+  },
+  {
+   "id": "212819",
+   "authority": "FDA",
+   "name": "Recarbrio",
+   "year": 2019,
+   "url": "http://www.accessdata.fda.gov/drugsatfda_docs/nda/2019/212819Orig1s000MultidisciplineR.pdf",
+   "format": "multidisc",
+   "coder": false
+  },
+  {
+   "id": "215310",
+   "authority": "FDA",
+   "name": "Exkivity",
+   "year": 2021,
+   "url": "https://www.accessdata.fda.gov/drugsatfda_docs/nda/2021/215310Orig1s000MultidisciplineR.pdf",
+   "format": "multidisc",
+   "coder": false
+  },
+  {
+   "id": "214096",
+   "authority": "FDA",
+   "name": "Tepmetko",
+   "year": 2021,
+   "url": "http://www.accessdata.fda.gov/drugsatfda_docs/nda/2021/214096Orig1s000MultidisciplineR.pdf",
+   "format": "multidisc",
+   "coder": true
+  },
+  {
+   "id": "761195",
+   "authority": "FDA",
+   "name": "Vyvgart",
+   "year": 2021,
+   "url": "https://www.accessdata.fda.gov/drugsatfda_docs/nda/2022/761195Orig1s000IntegratedR.pdf",
+   "format": "integrated",
+   "coder": true
+  },
+  {
+   "id": "216986",
+   "authority": "FDA",
+   "name": "Elucirem",
+   "year": 2022,
+   "url": "https://www.accessdata.fda.gov/drugsatfda_docs/nda/2022/216986Orig1s000MultidisciplineR.pdf",
+   "format": "multidisc",
+   "coder": false
+  },
+  {
+   "id": "218213",
+   "authority": "FDA",
+   "name": "Augtyro",
+   "year": 2023,
+   "url": "https://www.accessdata.fda.gov/drugsatfda_docs/nda/2023/218213Orig1s000MultidisciplineR.pdf",
+   "format": "multidisc",
+   "coder": true
+  },
+  {
+   "id": "217225",
+   "authority": "FDA",
+   "name": "Izervay",
+   "year": 2023,
+   "url": "https://www.accessdata.fda.gov/drugsatfda_docs/nda/2023/217225Orig1s000PharmR.pdf",
+   "format": "pharmtox",
+   "coder": true
+  },
+  {
+   "id": "219469",
+   "authority": "FDA",
+   "name": "Lynkuet",
+   "year": 2025,
+   "url": "https://www.accessdata.fda.gov/drugsatfda_docs/nda/2025/219469Orig1s000IntegratedR.pdf",
+   "format": "integrated",
+   "coder": true
+  },
+  {
+   "id": "219019",
+   "authority": "FDA",
+   "name": "Qfitlia",
+   "year": 2025,
+   "url": "http://www.accessdata.fda.gov/drugsatfda_docs/nda/2025/219019Orig1s000IntegratedR.pdf",
+   "format": "integrated",
+   "coder": false
+  },
+  {
+   "id": "761211",
+   "authority": "FDA",
+   "name": "Loargys",
+   "year": 2026,
+   "url": "https://www.accessdata.fda.gov/drugsatfda_docs/nda/2026/761211Orig1s000IntegratedR.pdf",
+   "format": "integrated",
+   "coder": true
+  },
+  {
+   "id": "761486",
+   "authority": "FDA",
+   "name": "Trutakna",
+   "year": 2026,
+   "url": "https://www.accessdata.fda.gov/drugsatfda_docs/nda/2026/761486Orig1s000IntegratedR.pdf",
+   "format": "integrated",
+   "coder": true
+  }
+ ]
+}

@@ -174,3 +174,38 @@ document pages (FDA 1,502 to 1,838, EMA 397 to 425); Qulipta 1 to 101,
 Welireg 1 to 52, Pombiliti 1 to 83; estimated input 20.7 M to 25.8 M tokens.
 Known cost: signature and team lists with a title word add one or two pages
 each. Layer 1 sees no codebook word and no outcome.
+
+## 2026-10-23: Pilot draw (seed 20261101)
+
+30 drugs, drawn from the unit lists of Phase 0: FDA = drugs on CDER's novel
+approvals lists with a non-clinical document (priority separate review, then
+multi-discipline, then Integrated Review; the year is the list year), EMA =
+drugs whose EPAR states new active substance status ("yes" only, PREREG v4).
+Quotas: at least 10 EMA, at least 10 FDA, at least 10 approved after 2022 (year
+2023 or later). The sorted candidates are shuffled with
+`random.Random(20261101)` and taken in that order as long as the quotas stay
+reachable (`studies/nam/pilot/draw.py`). The phase 0 sample documents are not
+excluded. Result: 13 EMA, 17 FDA, 10 from 2023 or later; no FDA candidate
+without a document was met in the draw order. `pilot.json` is committed before
+any extraction. The same substance at FDA and EMA is coded separately
+(Loargys is in the pilot twice).
+
+## 2026-10-23: Emil's blind coding of 15 pilot drugs
+
+15 of the 30 are chosen with the derived seed string `20261101|coder`, with at
+least 5 EMA and 5 FDA among them (result: 6 EMA, 9 FDA), marked `coder` in
+`pilot.json`. `coding_template.csv` has one row per drug and the columns drug,
+agency, year, A, B, C, D (yes/no), A_pages, B_pages, C_pages, D_pages, species
+(semicolon list), species_pages, notes. For each drug the layer 1 pages are
+written to one PDF in `$NAM_DATA/pilot/emil/` (488 pages in all, none over 150
+pages; Vyvgart is only 2 pages, the shortest section). The remaining 15 are
+checked against the model's quotes (PREREG, accuracy). PREREG is not changed:
+A is the pre-registered plan.
+
+## 2026-10-23: Blinding of pilot extraction
+
+Extraction on the pilot drugs may run, but the output is saved only in
+`$NAM_DATA/extract/` and is not shown, summarised or counted (not even the
+number of findings or rejected quotes) until Emil's 15 codings are committed.
+The tool prints only done, skipped or quota per chunk. Reason: the model output
+must not influence the reference coding. The rule is also in `CLAUDE.local.md`.

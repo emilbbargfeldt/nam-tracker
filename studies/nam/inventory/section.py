@@ -184,12 +184,18 @@ def load_pages(path):
     return pages
 
 
-def analyse_pdf(path, fmt):
+def locate_pdf(path, fmt):
+    """(location dict, page texts) of a PDF."""
     pages = load_pages(path)
     xml = ""
     if fmt not in WHOLE_DOCUMENT:
         xml = _run(["pdftohtml", "-xml", "-stdout", "-i", "-q", str(path)])
-    return summarize(locate(fmt, xml, pages), pages)
+    return locate(fmt, xml, pages), pages
+
+
+def analyse_pdf(path, fmt):
+    loc, pages = locate_pdf(path, fmt)
+    return summarize(loc, pages)
 
 
 def found_share(records, key):
