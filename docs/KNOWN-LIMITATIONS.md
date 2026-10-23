@@ -30,13 +30,13 @@ Unicode normalization.
   longer phrase. Digit tokens are checked against the whole surrounding word
   (so "10" does not match "10.5" or "10,000").
 - **Truncated quotes.** A quote that stops before a trailing "not" still
-  matches exactly ("The effect was" in "The effect was not seen"), because the
-  negation check only covers the matched place. Quotes should be full
-  sentences or clauses.
+  matches exactly ("The effect was" in "The effect was not seen"); see
+  "Negation after the quote" below. Quotes should be full sentences or clauses.
 - **Negation false alarms.** "No." in "Study No. 5" or "Nor-" in
   "Nor-epinephrine" count as negations and can cause a false "not found"
-  (safe direction). On the exact path no negation comparison happens (the
-  quote equals the matched place), so "Study No. 5" matches exactly.
+  (safe direction). On the exact path negations are compared on the
+  whitespace-widened span too; a quote that contains the same word, such as
+  "Study No. 5", still matches.
 - **Normalization gaps.** NFKC turns a vulgar fraction into "1/2" with a
   fraction slash and a superscript into a plain digit ("10" + superscript 2
   becomes "102"). U+2060, U+200E and U+200F are not stripped. Accepted; revisit
@@ -47,8 +47,22 @@ Unicode normalization.
   50 positions per k-gram are examined, which bounds time on repetitive text
   and very long quotes. On highly repetitive pages a true match can be missed
   (safe direction). Timing: 200k-char page, long quote, a few seconds.
-- **Negation scope.** Only the listed negation words are compared; other
-  polarity changes (for example "fail to", "unable") are not detected.
+- **Negation after the quote is not checked.** A quote cut off before a
+  trailing "not" still passes ("The effect was" in "The effect was not seen").
+- **Negation 4 or more tokens before the match is not seen.** The window is
+  3 tokens ("did not, in the end, show toxicity" passes for "show toxicity").
+- **Abbreviations shorten the window.** A token ending in . ; : ! ? ends the
+  window, so abbreviations ("e.g.", "Fig.", "No.")
+  cut it short and a negation before them is missed (unsafe direction).
+- **Negations are compared as sets.** One "not" in the quote hides a
+  different "not" earlier in the matched place or before it
+  ("was not seen; effect was not toxic" passes for "effect was not toxic").
+- **"non-" counts as the negation "non"**, also in "non-clinical". A page
+  "non-clinical" with a quote "clinical ..." is rejected (safe direction).
+  "Nonclinical" without hyphen is not a negation.
+- **Negation scope.** Only the listed negation words and the "non-" prefix
+  are compared; other polarity changes (for example "free of", "unremarkable")
+  are not detected.
 - **Digit tokens must match exactly**, so OCR damage inside a number makes the
   quote fail even if the rest matches. Accepted: wrong numbers must not pass.
 
@@ -65,5 +79,7 @@ Unicode normalization.
 - **Denylist scan covers text diffs only.** Binary files are blocked outright,
   but file names are only seen through the diff headers.
 - **Mutant coverage is partial.** The meta-tests cover always-true,
-  always-false, no normalization, no empty-quote check, no digit check and no
-  negation check; not every possible defect.
+  always-false, no normalization, no empty-quote check, no digit check, no
+  negation check, no check for negation before the match, no sentence
+  boundary, the old negation list, no "non-" prefix and no negation compare on
+  the exact path; not every possible defect.

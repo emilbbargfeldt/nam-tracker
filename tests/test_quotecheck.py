@@ -120,6 +120,94 @@ def test_same_negation_passes():
     assert verify_quote("There was no effect observed.", "There was no effect observed", RATIO)
 
 
+# --- negation before the matched place -------------------------------------
+
+def test_negation_before_exact_match_is_rejected():
+    assert not verify_quote("no effect was observed in organoids",
+                            "effect was observed in organoids", EXACT)
+
+
+def test_no_negation_before_exact_match_passes():
+    assert verify_quote("the effect was observed in organoids",
+                        "effect was observed in organoids", EXACT)
+
+
+def test_contraction_before_exact_match_is_rejected():
+    assert not verify_quote("did not show toxicity", "show toxicity", EXACT)
+
+
+def test_negation_before_fuzzy_match_is_rejected():
+    assert not verify_quote("There was no effect was observed in organoids.",
+                            "effect was observd in organoids", 0.8)
+
+
+def test_negation_in_quote_before_match_passes():
+    assert verify_quote("did not show toxicity", "not show toxicity", EXACT)
+
+
+def test_negation_further_than_three_tokens_back_is_ignored():
+    assert verify_quote("not one two three effect was seen", "effect was seen", EXACT)
+
+
+def test_negation_before_first_hit_but_clean_second_hit_passes():
+    assert verify_quote("no effect was seen. Later the effect was seen.",
+                        "effect was seen", EXACT)
+
+
+def test_sentence_boundary_stops_the_window():
+    assert verify_quote("No adverse effects were seen. The NOAEL was 10 mg/kg.",
+                        "The NOAEL was 10 mg/kg", EXACT)
+
+
+def test_sentence_boundary_stops_the_window_fuzzy():
+    assert verify_quote("No adverse effects were seen. The NOAEL was 10 mg/kg.",
+                        "The NOAEL wass 10 mg/kg", 0.8)
+
+
+def test_negation_in_previous_sentence_is_ignored():
+    assert verify_quote("The effect was not seen. The NOAEL was 10 mg/kg.",
+                        "The NOAEL was 10 mg/kg", EXACT)
+
+
+def test_negation_in_previous_sentence_is_ignored_fuzzy():
+    assert verify_quote("The effect was not seen. The NOAEL was 10 mg/kg.",
+                        "The NOAEL wass 10 mg/kg", 0.8)
+
+
+def test_negation_exactly_three_tokens_back_is_rejected():
+    assert not verify_quote("not one two effect was seen", "effect was seen", EXACT)
+
+
+def test_several_negations_before_match_are_rejected():
+    assert not verify_quote("never said no effect was seen", "no effect was seen", EXACT)
+
+
+def test_negation_as_first_token_of_page_is_rejected():
+    assert not verify_quote("no effect was seen", "effect was seen", EXACT)
+
+
+@pytest.mark.parametrize("word", ["failed", "fails", "unable", "nothing", "nobody", "nowhere"])
+def test_extended_negation_words_before_match_are_rejected(word):
+    assert not verify_quote("It %s to show toxicity" % word, "to show toxicity", EXACT)
+
+
+def test_failed_to_show_toxicity_is_rejected():
+    assert not verify_quote("The drug failed to show toxicity", "show toxicity", EXACT)
+
+
+def test_non_prefix_inside_exact_span_is_rejected():
+    assert not verify_quote("the compound was non-toxic in organoids",
+                            "toxic in organoids", EXACT)
+
+
+def test_non_prefix_in_quote_passes():
+    assert verify_quote("non-toxic", "non-toxic", EXACT)
+
+
+def test_nonclinical_without_hyphen_is_not_a_negation():
+    assert verify_quote("a nonclinical study was done", "study was done", EXACT)
+
+
 # --- hyphenation variants --------------------------------------------------
 
 def test_real_hyphen_broken_at_line_end_matches():

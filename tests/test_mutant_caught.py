@@ -10,6 +10,13 @@ import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 
+
+def _mutated_source(old, new):
+    text = (ROOT / "core" / "quotecheck.py").read_text()
+    assert old in text, old
+    return text.replace(old, new, 1)
+
+
 _PATCH = "import core.quotecheck as q\n{patch}\nverify_quote = q.verify_quote\n"
 MUTANTS = {
     "always_true": (
@@ -36,6 +43,36 @@ MUTANTS = {
         _PATCH.format(patch="q._negations_ok = lambda quote, span: True"),
         {"test_missing_negation_in_quote_is_rejected",
          "test_extra_negation_in_quote_is_rejected"},
+    ),
+    "no_negation_before_check": (
+        _PATCH.format(patch="q._negated_before = lambda page, lo, quote: False"),
+        {"test_negation_before_exact_match_is_rejected",
+         "test_contraction_before_exact_match_is_rejected",
+         "test_negation_before_fuzzy_match_is_rejected"},
+    ),
+    "no_sentence_boundary": (
+        _PATCH.format(patch=(
+            "q._SENTENCE_END = ''\n"
+            "q._window_tokens = lambda page, lo: page[:lo].split()[-3:]")),
+        {"test_negation_in_previous_sentence_is_ignored",
+         "test_negation_in_previous_sentence_is_ignored_fuzzy"},
+    ),
+    "old_negation_list": (
+        _PATCH.format(patch=(
+            "q._NEGATIONS = frozenset(['not', 'no', 'none', 'without', 'never', "
+            "'neither', 'nor', 'absence', 'absent', 'lack', 'lacked', 'lacking', "
+            "'cannot'])")),
+        {"test_failed_to_show_toxicity_is_rejected",
+         "test_extended_negation_words_before_match_are_rejected"},
+    ),
+    "no_non_prefix": (
+        _PATCH.format(patch="import re\nq._NON_PREFIX = re.compile(r'(?!x)x')"),
+        {"test_non_prefix_inside_exact_span_is_rejected"},
+    ),
+    "no_exact_negation_compare": (
+        _mutated_source("if (_digits_ok(quote, span) and _negations_ok(quote, span)",
+                        "if (_digits_ok(quote, span)"),
+        {"test_non_prefix_inside_exact_span_is_rejected"},
     ),
 }
 
