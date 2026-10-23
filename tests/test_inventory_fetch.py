@@ -85,9 +85,9 @@ def test_failed_request_still_counts_for_rate_limit(tmp_path):
     assert clock.now - t0 >= 1.0 - 1e-9
 
 
-def test_cap_constant_is_two_gb():
+def test_cap_constant_is_five_gib():
     from studies.nam.inventory import fetch
-    assert fetch.MAX_DATA_BYTES == 2 * 1024 ** 3
+    assert fetch.MAX_DATA_BYTES == 5 * 1024 ** 3
 
 
 def test_url_with_space_is_quoted_not_rejected(monkeypatch):

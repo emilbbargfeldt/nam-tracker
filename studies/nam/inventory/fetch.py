@@ -13,7 +13,7 @@ from pathlib import Path
 
 USER_AGENT = "nam-tracker-phase0/1.0 (academic inventory; read-only)"
 MIN_INTERVAL_S = 1.0
-MAX_DATA_BYTES = 2 * 1024 ** 3
+MAX_DATA_BYTES = 5 * 1024 ** 3
 TIMEOUT_S = 60
 MAX_BODY_BYTES = 512 * 1024 ** 2
 CHUNK = 1024 * 1024

@@ -52,3 +52,38 @@ decision date. The number of rows where the two differ is logged.
 PREREG.md version 2 added under "Changes" (text as approved): Integrated
 Reviews as non-clinical, format per drug, EMA-only result for question 2 is
 the one interpreted as evidence of changed practice, EMA definition fixed.
+
+## 2026-10-23: PREREG version 3
+
+PREREG.md version 3 added under "Changes" (text as approved): EMA unit by the
+EPAR statement of new active substance status, layer 1 pre-filter by
+non-clinical section, OCR for all pages below the threshold, cost from token
+counts. Added before any outcome was seen.
+
+## 2026-10-23: Layer 1 and layer 2 pre-filter, blinding
+
+Layer 1 passes only the pages of the non-clinical section, located from
+bookmarks or heading-like lines with the section-title words of outline.py
+(`section.py`). It uses no codebook word and sees no outcome. A separate
+non-clinical review is the section as a whole; if the section is not found the
+whole document is passed and logged. Layer 2 (keyword filter) is allowed only
+if the pilot shows it loses no A findings (extraction rule 4). Reason: about
+204,000 pages is too much to read, and a title-based cut cannot depend on
+the outcome.
+
+## 2026-10-23: EMA unit from the EPAR statement
+
+A definition-B candidate counts only if the EPAR public assessment report has a
+sentence naming the CHMP or the Committee, a conclusion verb and "new active
+substance", without a negation before the phrase (`epar_nas.py`, rule
+version 1, fixed before counting). Output per drug is yes, no or unknown; only
+page and sentence numbers are stored. Unknown is excluded and reported per
+year. If unknown is more than 10 % of the candidates in any year, work stops
+and the positions of unmatched occurrences are reviewed; the rule may only be
+changed in a new commit before the next run. Reason: definition B is 16 %
+above EMA's own counts.
+
+## 2026-10-23: Data limit 5 GiB
+
+The fetch cap is raised from 2 to 5 GiB for the EPAR reports (disk has 36 GB
+free). Everything stays on the Pi and outside the repository.
