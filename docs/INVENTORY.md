@@ -323,18 +323,18 @@ Located by bookmarks, else heading-like lines, with the section-title words of `
 | FDA | 2019 | Reblozyl | separate | 38 | 38 | yes | document type | 1-38 | 56120 | 4 |  |
 | FDA | 2020 | Pizensy | multidisc | 150 | 27 | yes | headings | 1-1,9-9,30-37,111-127 | 55613 | 0 |  |
 | FDA | 2020 | Pemazyre | multidisc | 202 | 65 | yes | bookmarks | 4-4,6-6,10-10,33-64,169-198 | 123140 | 0 |  |
-| FDA | 2021 | Qulipta | integrated | 280 | 101 | yes | headings | 23-30,34-34,66-122,206-206,237-270 | 251545 | 4 |  |
+| FDA | 2021 | Qulipta | integrated | 280 | 137 | yes | headings | 23-30,34-34,66-158,206-206,237-270 | 305609 | 4 |  |
 | FDA | 2021 | Welireg | multidisc | 255 | 52 | yes | headings | 1-1,12-12,32-46,195-199,201-201,223-251 | 101183 | 0 |  |
-| FDA | 2022 | Vonjo | integrated | 292 | 6 | yes | bookmarks | 37-39,70-72 | 18507 | 0 |  |
+| FDA | 2022 | Vonjo | integrated | 292 | 41 | yes | bookmarks | 37-39,70-72,102-136 | 118768 | 0 |  |
 | FDA | 2022 | Vabysmo | separate | 53 | 53 | yes | document type | 1-53 | 88251 | 2 |  |
 | FDA | 2023 | Columvi | multidisc | 322 | 39 | yes | headings | 1-1,16-18,40-70,215-216,319-320 | 73536 | 0 |  |
-| FDA | 2023 | Pombiliti | integrated | 315 | 83 | yes | headings | 23-36,48-48,77-139,300-300,304-305,310-311 | 188740 | 10 |  |
+| FDA | 2023 | Pombiliti | integrated | 315 | 98 | yes | headings | 23-36,48-48,77-139,145-159,300-300,304-305,310-311 | 216360 | 10 |  |
 | FDA | 2024 | Lumisight | multidisc | 145 | 21 | yes | bookmarks | 28-48 | 46710 | 0 |  |
 | FDA | 2024 | Letybo | multidisc | 107 | 7 | yes | bookmarks | 38-42,103-104 | 13272 | 0 |  |
-| FDA | 2025 | Voyxact | integrated | 218 | 5 | yes | bookmarks | 35-37,65-66 | 10276 | 1 |  |
-| FDA | 2025 | Jascayd | integrated | 419 | 5 | yes | bookmarks | 36-38,85-86 | 12464 | 0 |  |
+| FDA | 2025 | Voyxact | integrated | 218 | 21 | yes | bookmarks | 35-37,65-66,94-109 | 51072 | 1 |  |
+| FDA | 2025 | Jascayd | integrated | 419 | 24 | yes | bookmarks | 36-38,85-86,144-162 | 68499 | 0 |  |
 | FDA | 2026 | Zenbexus | multidisc | 329 | 54 | yes | bookmarks | 45-97,226-226 | 64388 | 31 |  |
-| FDA | 2026 | Utebzi | integrated | 484 | 7 | yes | bookmarks | 58-62,105-106 | 20915 | 0 |  |
+| FDA | 2026 | Utebzi | integrated | 484 | 8 | yes | bookmarks | 58-62,105-106,209-209 | 23650 | 0 |  |
 | EMA | 2015 | Xadago | epar | 118 | 17 | yes | headings | 16-32 | 58732 | 0 |  |
 | EMA | 2015 | Entresto | epar | 115 | 15 | yes | bookmarks | 19-33 | 50948 | 0 |  |
 | EMA | 2016 | Rekovelle | epar | 95 | 7 | yes | bookmarks | 17-23 | 25007 | 0 |  |
@@ -377,7 +377,7 @@ Documents by basis:
 | document type | 9 | 19 % |
 | headings | 12 | 25 % |
 
-FDA: median section 52 of 218 pages; sections of integrated/multidisc/epar documents (excluding whole-document cases): median 27 pages.
+FDA: median section 52 of 218 pages; sections of integrated/multidisc/epar documents (excluding whole-document cases): median 39 pages.
 
 EMA: median section 14 of 140 pages; sections of integrated/multidisc/epar documents (excluding whole-document cases): median 14 pages.
 
@@ -387,28 +387,28 @@ Tokens = characters / 4, over the located section only (whole document when not 
 
 | Authority | Documents | Median chars per text page (imputation) | Input tokens | Approx. +-2 SE |
 |---|---|---|---|---|
-| FDA | 541 | 1921 | 19.0 M | 10.6-27.4 M |
+| FDA | 541 | 1921 | 20.5 M | 12.3-28.8 M |
 | EMA (unit yes) | 453 | 3297 | 6.8 M | 5.2-8.4 M |
 | EMA (yes + unknown) | 506 | 3297 | 7.6 M | 5.9-9.4 M |
 | EMA (all B with EPAR) | 567 | 3297 | 8.4 M | 6.4-10.3 M |
 
-FDA plus EMA (unit yes): 25.8 M input tokens.
+FDA plus EMA (unit yes): 27.3 M input tokens.
 
 Claude API list prices, USD per million tokens (source: https://platform.claude.com/docs/en/about-claude/pricing and https://claude.com/pricing, fetched 2026-10-23). Haiku 5.5 is priced by prompt length (0.10 up to 100,000 tokens per prompt; 0.50 above). The largest sampled section (low-text pages imputed) is 158559 tokens, above that threshold, so the Haiku figure is a lower bound. Batch processing is 50 % cheaper on the same page.
 
 | Model | Input USD/MTok | FDA USD | EMA USD | Total USD | Total USD, batch |
 |---|---|---|---|---|---|
 | Haiku 5.5 | 0.10 | 2 | 1 | 3 | 1 |
-| Sonnet 5.5 | 2.00 | 38 | 14 | 52 | 26 |
-| Opus 5.5 | 4.00 | 76 | 27 | 103 | 52 |
+| Sonnet 5.5 | 2.00 | 41 | 14 | 55 | 27 |
+| Opus 5.5 | 4.00 | 82 | 27 | 109 | 55 |
 
 Input only. Output tokens (the extracted findings and quotes) and the instruction text per request are not included; output costs 0.50/10.00/20.00 USD/MTok for Haiku/Sonnet/Opus respectively, so a few findings per drug add little next to the input.
 
-Claude Code Pro: the pricing page states that Claude Code is included in Pro, shares the plan's usage limits, that limits reset on a rolling five-hour window, and that there is no fixed message count. **No token quota per session is published, so the number of sessions cannot be derived from a source.** Under assumed capacities (assumptions, not facts) the total input of 25.8 M tokens would need:
+Claude Code Pro: the pricing page states that Claude Code is included in Pro, shares the plan's usage limits, that limits reset on a rolling five-hour window, and that there is no fixed message count. **No token quota per session is published, so the number of sessions cannot be derived from a source.** Under assumed capacities (assumptions, not facts) the total input of 27.3 M tokens would need:
 
 | Assumed input tokens per five-hour session | Sessions |
 |---|---|
-| 1 M | 26 |
+| 1 M | 27 |
 | 3 M | 9 |
 | 10 M | 3 |
 

@@ -19,9 +19,13 @@ from pathlib import Path
 
 from core.quotecheck import verify_quote
 
-from . import chunks, cli, prompt
+from . import chunks, cli, ocr, prompt
 
 MIN_RATIO = 0.95
+
+
+def document_dir(root, doc_id):
+    return Path(root) / prompt.prompt_hash()[:12] / doc_id
 
 
 def _call(caller, text):
@@ -68,7 +72,7 @@ def extract_document(doc_id, pages, page_numbers, caller, root, version="",
                      max_chars=chunks.MAX_CHARS, say=lambda line: None):
     """Process the chunks of one document. Returns "done", "error" or "quota"."""
     p_hash = prompt.prompt_hash()
-    doc_dir = Path(root) / p_hash[:12] / doc_id
+    doc_dir = document_dir(root, doc_id)
     doc_dir.mkdir(parents=True, exist_ok=True)
     status = "done"
     for chunk in chunks.chunk_pages(pages, page_numbers, max_chars):
@@ -125,8 +129,19 @@ def doc_id_of(item):
     return "%s_%s_%s" % (item["authority"], item["year"], slug)
 
 
-def main():
+def prepare_document(path, fmt, ocr_dir, run=ocr.subprocess.run):
+    """(pages, page numbers of layer 1, OCR info or None). Pages of layer 1
+    below the text-layer threshold are OCR'd; if that cannot be done OcrError
+    is raised and the document must not be extracted."""
     from studies.nam.inventory import section
+    loc, pages = section.locate_pdf(path, fmt)
+    low = section.low_pages(loc, pages)
+    pages, info = ocr.apply_ocr(path, pages, low, ocr_dir, run)
+    numbers = [p for lo, hi in loc["ranges"] for p in range(lo, hi + 1)]
+    return pages, numbers, info
+
+
+def main():
     from studies.nam.inventory.fetch import Fetcher
     from studies.nam.inventory.fetch_tocs import get_with_retry
     from studies.nam.pilot import draw
@@ -137,16 +152,25 @@ def main():
     cwd.mkdir(exist_ok=True)
     version = cli.claude_version()
     caller = lambda text: cli.call_claude(text, cwd)
+    no_ocr = 0
     for item in json.loads(draw.OUT.read_text())["items"]:
+        doc_id = doc_id_of(item)
         path = get_with_retry(f, item["url"])
-        loc, pages = section.locate_pdf(path, item["format"])
-        numbers = [p for lo, hi in loc["ranges"] for p in range(lo, hi + 1)]
-        status = extract_document(doc_id_of(item), pages, numbers, caller, root,
-                                  version, say=print)
+        try:
+            pages, numbers, info = prepare_document(path, item["format"], f.root / "ocr")
+        except ocr.OcrError:
+            print("%s skipped: pages need OCR and OCR is not available" % doc_id)
+            no_ocr += 1
+            continue
+        if info:
+            document_dir(root, doc_id).mkdir(parents=True, exist_ok=True)
+            _write_atomic(document_dir(root, doc_id) / "ocr.json", info)
+        status = extract_document(doc_id, pages, numbers, caller, root, version,
+                                  say=print)
         if status == "quota":
             print("stopped: usage limit; run again later to resume")
             return 2
-    return 0
+    return 3 if no_ocr else 0
 
 
 if __name__ == "__main__":

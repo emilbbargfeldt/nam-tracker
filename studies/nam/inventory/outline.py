@@ -8,12 +8,14 @@ import subprocess
 
 # Section-title words only (not codebook words). A bookmark counts when it
 # names a non-clinical section or the pharmacology/toxicology pair; "Clinical
-# Pharmacology" alone does not count.
-_TITLE = re.compile(
-    r"non-?clinical|pharmacology\s*(?:/|and|&)\s*toxicology", re.I)
+# Pharmacology" alone does not count. The pair may be joined by "/", "and", "&",
+# a comma, a hyphen or only a space ("Pharmacology Toxicology: Additional
+# Information", seen in an Integrated Review appendix).
+_PAIR = r"pharmacology\s*(?:/|,|-|and|&)?\s*toxicology"
+_TITLE = re.compile(r"non-?clinical|" + _PAIR, re.I)
 _HEADING = re.compile(
     r"^\s*(?:\d+(?:\.\d+)*\.?\s+)?"
-    r"(?:non-?clinical|pharmacology\s*(?:/|and|&)\s*toxicology)\b", re.I)
+    r"(?:non-?clinical|" + _PAIR + r")\b", re.I)
 _ITEM = re.compile(r"<item[^>]*>(.*?)</item>", re.S)
 MAX_HEADING_LEN = 90
 

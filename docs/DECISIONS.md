@@ -256,3 +256,48 @@ where it stopped. Per call `calls.jsonl` has time, document, chunk, model, Claud
 Code version, prompt hash, chunk hash, tokens (usage), model time, wall time,
 status and the error class. Duplicates from the overlap are removed on (code,
 page, quote).
+
+## 2026-10-23: Title words: Pharmacology Toxicology without a separator
+
+Vyvgart (pilot, Integrated Review) had only two layer 1 pages (5.1 on page 30
+and 7.1 on page 48, each a one-page sub-section that ends on the same page at
+the next heading). The bookmarks show why: the detailed section is appendix 13,
+"Pharmacology Toxicology: Additional Information and Assessment" (pages 96-102),
+and the title words of `outline.py` required "/", "and" or "&" between the two
+words. The end rule was right; the title words were too narrow. The pair may now
+be joined by "/", ",", "-", "and", "&" or only a space; "Pharmacology" or
+"Toxicology" alone and "Clinical Pharmacology" do not match. These are section
+title words, not codebook words. Effect on the 48 sample documents, from page
+numbers only: 6 Integrated Reviews gain the appendix (for example Vonjo 6 to
+41 pages, Voyxact 5 to 21), nothing else changes; section pages 2,263 to
+2,385. The earlier yes/no verdicts for a non-clinical section of Integrated
+Reviews were all yes and are not rerun. Vyvgart now has 10 layer 1 pages (30,
+48, 96-103); the 15 pages of Emil's material were regenerated (652 pages in
+all, none over 150), the pilot list is unchanged.
+
+## 2026-10-23: Smoke test with the final prompt
+
+One call with the final `prompt.py` and `build_argv` on a made-up three-page
+document (`studies/nam/extract/smoke.py`): status done, 3 findings accepted,
+0 rejected, codes A, C and S as expected, no finding on the page without a
+finding. Output is in `$NAM_DATA/extract/smoke/`.
+
+## 2026-10-23: OCR for layer 1 pages below the threshold; pilot count
+
+Pages below 100 non-blank characters inside layer 1, counted for the 30 pilot
+drugs (numbers only): 137 pages in 12 drugs. EMA: Reagila 2, Refixia 2,
+Elzonris 3. FDA: Praxbind 25, Strensiq 24, Doptelet 21, Augtyro 30, Loargys 14,
+Izervay 12, Vyvgart 2, Palynziq 1, Accrufer 1. The other 18 have none.
+
+OCR (`studies/nam/extract/ocr.py`) renders such a page with `pdftoppm` (300 dpi,
+grey) and reads it with `tesseract` (English), command line only. The text of
+each page is kept in `$NAM_DATA/ocr/` and made once; OCR text replaces the text
+layer only if it is longer. Per document `ocr.json` records the tesseract
+version, dpi, language, the low pages and the replaced pages. OCR text is the
+page text the model sees and that quotes are checked against. If a document has
+low pages and OCR is missing or fails, the tool does not extract that document
+("skipped: pages need OCR"), and the run ends with a non-zero code. A failed
+OCR command is never stored as an empty page; an empty result for a blank page
+is valid. Tests use a mocked `pdftoppm` and `tesseract` and a mutant (OCR not
+applied, missing tesseract ignored); one test with the real tools is skipped
+until tesseract is installed.

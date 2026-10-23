@@ -156,6 +156,14 @@ def page_counts(pages):
     return [(len(" ".join(p.split())), len("".join(p.split()))) for p in pages]
 
 
+def low_pages(loc, pages, threshold=measure.TEXT_LAYER_MIN_CHARS):
+    """Page numbers inside the ranges of loc with fewer non-blank characters
+    than the threshold."""
+    counts = page_counts(pages)
+    return [p for lo, hi in loc["ranges"] for p in range(lo, hi + 1)
+            if counts[p - 1][1] < threshold]
+
+
 def summarize(loc, pages, threshold=measure.TEXT_LAYER_MIN_CHARS):
     counts = page_counts(pages)
     sec = [counts[p - 1] for lo, hi in loc["ranges"] for p in range(lo, hi + 1)]

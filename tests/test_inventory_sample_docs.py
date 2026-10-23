@@ -1,3 +1,4 @@
+import re
 import shutil
 
 import pytest
@@ -39,6 +40,30 @@ def test_clinical_pharmacology_bookmark_alone_is_not_a_match():
     assert outline.title_matches("4.2 Pharmacology/Toxicology")
     assert outline.title_matches("Nonclinical Studies")
     assert outline.title_matches("Non-Clinical Summary")
+
+
+@pytest.mark.parametrize("title", [
+    "13. Pharmacology Toxicology: Additional Information and Assessment",
+    "Pharmacology and Toxicology", "Pharmacology & Toxicology",
+    "Pharmacology, Toxicology", "Pharmacology-Toxicology",
+    "NONCLINICAL PHARMACOLOGY/TOXICOLOGY"])
+def test_pharmacology_toxicology_pair_variants_match(title):
+    assert outline.title_matches(title)
+    assert outline._HEADING.match(title.split(" ", 1)[1] if title[0].isdigit() else title)
+
+
+@pytest.mark.parametrize("title", [
+    "14. Clinical Pharmacology: Additional Information and Assessment",
+    "Pharmacology", "Toxicology", "Pharmacology of the drug",
+    "Safety Pharmacology"])
+def test_pharmacology_alone_does_not_match(title):
+    assert not outline.title_matches(title)
+
+
+def test_mutant_old_pair_pattern_is_caught(monkeypatch):
+    monkeypatch.setattr(outline, "_TITLE", re.compile(
+        r"non-?clinical|pharmacology\s*(?:/|and|&)\s*toxicology", re.I))
+    assert not outline.title_matches("13. Pharmacology Toxicology: Additional")
 
 
 @pytest.mark.skipif(shutil.which("pdftotext") is None, reason="poppler missing")
