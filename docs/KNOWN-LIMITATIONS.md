@@ -84,32 +84,32 @@ Unicode normalization.
   boundary, the old negation list, no "non-" prefix and no negation compare on
   the exact path; not every possible defect.
 
-## EPAR new-active-substance rule (version 2)
+## EPAR new-active-substance rule (version 2.1)
 
-- **Negation window is 4 tokens.** "The CHMP cannot agree that X is a new
-  active substance" counts as positive because "cannot" is 6 tokens before the
-  phrase. Accepted by design (version 1 let any earlier negation count and
-  produced many conflicts); the error direction is a false "yes".
+- **Negation windows.** A negation counts within 4 tokens before the phrase or
+  within 2 tokens before a conclusion verb. "no" and "without" are not in the
+  negation list ("no new active substance" is positive).
+- **Verb negation is read for any conclusion verb in the sentence**, also one
+  after the phrase ("X is a new active substance, which the CHMP did not
+  consider relevant" is negative).
+- **A participle can read as a negated verb.** "The CHMP concluded that X, not
+  previously considered elsewhere, is a new active substance" is negative
+  ("not previously" stands 2 tokens before "considered"): false "no".
+- **Negation farther than both windows is missed.** "The CHMP did not, after
+  lengthy review, consider X a new active substance" is positive: false "yes".
 - **"known active substance" anywhere is a no-signal.** It also fires in
   unrelated contexts (for example a known active substance used as a
-  comparator). With a positive conclusion in the same report the verdict is
-  unknown, otherwise "no".
+  comparator). It only gives "no" when the report has no conclusion sentence;
+  any conclusion sentence decides instead.
 - **Last conclusion wins.** A late sentence about a different substance in the
   same report (combination products) can decide the verdict.
-- **Applicant words exclude a sentence** even when the CHMP agrees in the same
-  sentence ("the applicant claimed ..., which the CHMP considers correct").
-  That sentence is not a match; the verdict then relies on other sentences.
-- **Link rule.** A medicine page whose initial assessment report is filed only
-  under variation reports (Evkeeza) has no EPAR link and is unknown.
-- **Far negations give false "yes".** "The CHMP did not consider that X is a
-  new active substance" is positive ("not" is 5 tokens back), as is "cannot
-  agree". "no" and "without" are not in the negation list ("no new active
-  substance" is positive).
 - **Only the first phrase of a sentence is classified.** "X is a new active
   substance, whereas Y is not a new active substance" is positive.
 - **"well-known active substance"** also matches the no-signal.
-- **Tier 4 of the link rule accepts the variation-report folder** when the file
-  is named like the public EPAR (Tuzulby); other variation-style names never
-  count in fallback tiers. Evkeeza's initial report is filed only under a
-  variation-style name and is left unknown.
-
+- **Applicant words exclude a sentence** even when the CHMP agrees in the same
+  sentence ("the applicant claimed ..., which the CHMP considers correct").
+  That sentence is not a match; the verdict then relies on other sentences.
+- **Link rule.** Tier 4 of the link rule accepts the variation-report folder
+  when the file is named like the public EPAR (Tuzulby); other
+  variation-style names never count in fallback tiers. Evkeeza's initial
+  report is filed only under a variation-style name and is left unknown.

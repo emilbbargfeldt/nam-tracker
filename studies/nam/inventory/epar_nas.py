@@ -4,17 +4,18 @@ Metadata, not an outcome: one verdict per drug (yes / no / unknown) from a
 fixed rule. Only page numbers and sentence numbers leave this module; no text
 is printed or stored.
 
-Rule version 2 (version 1 failed the 10 % unknown stop rule, see DECISIONS):
+Rule version 2.1 (version 1 failed the 10 % unknown stop rule, see DECISIONS):
  - A sentence is a conclusion match when it contains "new active
    substance(s)" and a conclusion verb (consider, qualif, conclud, agree) and
    no word from the applicant side (applicant, requested, claim, declared,
    indicated). The CHMP is no longer required.
  - A match is negative when a negation (not, cannot, no longer, neither, nor,
-   n't) stands within the 4 tokens before the phrase, else positive.
+   n't) stands within the 4 tokens before the phrase or within the 2 tokens
+   before a conclusion verb, else positive.
  - "known active substance" anywhere in the document is a no-signal.
- - Verdict: if a no-signal and a positive match both exist, unknown; else the
-   last conclusion match in document order decides (yes or no); else a
-   no-signal alone gives no; else unknown.
+ - Verdict: the last conclusion match in document order decides (yes or no),
+   whatever the no-signal; with no conclusion sentence a no-signal gives no;
+   else unknown.
 Sentences are split on . ; ! ? followed by a capital letter, per page; page
 and sentence numbers are 1-based.
 
@@ -31,8 +32,9 @@ from .fetch import Fetcher
 from .fetch_tocs import get_with_retry
 from .xlsx import read_xlsx
 
-RULE_VERSION = 2
+RULE_VERSION = "2.1"
 NEAR_TOKENS = 4
+VERB_TOKENS = 2
 _NAS = re.compile(r"new\s+active\s+substances?", re.I)
 _APPLICANT = re.compile(
     r"\b(?:applicant|requested|claim|declared|indicated)", re.I)
@@ -71,12 +73,21 @@ def _negated(sentence, pos):
     return bool(_NEG.search(" ".join(sentence[:pos].split()[-NEAR_TOKENS:])))
 
 
+def _negated_verb(sentence):
+    """Negation within VERB_TOKENS tokens before any conclusion verb."""
+    return any(
+        _NEG.search(" ".join(sentence[:m.start()].split()[-VERB_TOKENS:]))
+        for m in _VERB.finditer(sentence))
+
+
 def classify(sentence):
     """None, or 'positive' / 'negative'. Only for a sentence with the phrase."""
     m = _NAS.search(sentence)
     if not m or not _has_verb(sentence) or _from_applicant(sentence):
         return None
-    return "negative" if _negated(sentence, m.start()) else "positive"
+    if _negated(sentence, m.start()) or _negated_verb(sentence):
+        return "negative"
+    return "positive"
 
 
 def analyse(pages):
@@ -99,9 +110,6 @@ def analyse(pages):
 
 
 def verdict(matches, known):
-    positive = any(m["polarity"] == "positive" for m in matches)
-    if known and positive:
-        return "unknown"
     if matches:
         return "yes" if matches[-1]["polarity"] == "positive" else "no"
     return "no" if known else "unknown"

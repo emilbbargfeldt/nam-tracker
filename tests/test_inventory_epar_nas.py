@@ -12,6 +12,10 @@ SINCE = ("Since X is not a constituent of a medicinal product previously "
 APPLICANT = "The applicant requested X to be considered as a new active substance."
 KNOWN = "X is a known active substance."
 NEG = "The CHMP considers that X is not a new active substance."
+DOES_NOT = "The CHMP does not consider X to be a new active substance."
+DID_NOT = "The CHMP did not consider that X is a new active substance."
+KNOWN_VALSARTAN = "Valsartan is a known active substance."
+POS_SACUBITRIL = "The CHMP considers sacubitril to be a new active substance."
 NO_CHMP = "It is considered that X is a new active substance."
 NO_VERB = "The CHMP listed X among new active substances."
 FOREIGN = "A new active substance is a substance not authorised before."
@@ -23,6 +27,9 @@ CASES = [
     ("The Committee concluded that X qualifies as a new active substance.",
      "positive"),
     (NEG, "negative"),
+    (DOES_NOT, "negative"),
+    (DID_NOT, "negative"),
+    ("The CHMP cannot agree that X is a new active substance.", "negative"),
     ("X was not considered a new active substance.", "negative"),
     (APPLICANT, None),
     ("The applicant claimed that X is a new active substance, which the CHMP "
@@ -67,11 +74,19 @@ def test_negation_far_before_the_phrase_is_ignored():
     assert epar_nas.classify(SINCE) == "positive"
 
 
-def test_known_limitation_negation_more_than_four_tokens_before_is_missed():
-    # Rule v2 as specified: "cannot" is 6 tokens before the phrase. Listed in
-    # docs/KNOWN-LIMITATIONS.md; if the rule changes this test must change.
+def test_negation_before_the_verb_counts():
+    assert epar_nas.classify(DOES_NOT) == "negative"
+    assert epar_nas.classify(DID_NOT) == "negative"
+    assert verdict_of(DOES_NOT) == "no"
+    assert verdict_of(DID_NOT) == "no"
+
+
+def test_verb_negation_window_boundary_is_two_tokens():
     assert epar_nas.classify(
-        "The CHMP cannot agree that X is a new active substance.") == "positive"
+        "The CHMP did not really consider X a new active substance.") == "negative"
+    assert epar_nas.classify(
+        "The CHMP did not really truly consider X a new active substance."
+    ) == "positive"
 
 
 def test_negation_window_boundary_is_four_tokens():
@@ -93,9 +108,10 @@ def test_last_conclusion_match_wins():
     assert verdict_of(SINCE + " " + NEG) == "no"
 
 
-def test_known_signal_with_positive_match_is_unknown():
-    assert verdict_of(KNOWN, SINCE) == "unknown"
-    assert verdict_of(SINCE, KNOWN) == "unknown"
+def test_positive_conclusion_wins_over_known_signal():
+    assert verdict_of(KNOWN_VALSARTAN, POS_SACUBITRIL) == "yes"
+    assert verdict_of(POS_SACUBITRIL, KNOWN_VALSARTAN) == "yes"
+    assert verdict_of(KNOWN_VALSARTAN + " " + POS_SACUBITRIL) == "yes"
 
 
 def test_known_signal_with_negative_match_is_no():
@@ -169,7 +185,6 @@ def test_mutant_negation_ignored_is_caught(monkeypatch):
 def test_mutant_without_known_signal_is_caught(monkeypatch):
     monkeypatch.setattr(epar_nas, "_KNOWN", re.compile(r"(?!x)x"))
     assert verdict_of(KNOWN) == "unknown"  # should be "no"
-    assert verdict_of(KNOWN, SINCE) == "yes"  # should be "unknown"
 
 
 def test_mutant_first_match_wins_is_caught(monkeypatch):
@@ -181,10 +196,35 @@ def test_mutant_first_match_wins_is_caught(monkeypatch):
     assert verdict_of(SINCE, NEG) == "yes"  # should be "no"
 
 
-def test_mutant_known_does_not_override_positive_is_caught(monkeypatch):
-    def no_override(matches, known):
+def test_mutant_known_overrides_positive_is_caught(monkeypatch):
+    def known_wins(matches, known):
+        if known:
+            return "no"
+        return "yes" if matches and matches[-1]["polarity"] == "positive" else "unknown"
+    monkeypatch.setattr(epar_nas, "verdict", known_wins)
+    assert verdict_of(KNOWN_VALSARTAN, POS_SACUBITRIL) == "no"  # should be "yes"
+
+
+def test_mutant_known_with_positive_is_unknown_is_caught(monkeypatch):
+    """The version 2 verdict must no longer be what the code does."""
+    def v2(matches, known):
+        positive = any(m["polarity"] == "positive" for m in matches)
+        if known and positive:
+            return "unknown"
         if matches:
             return "yes" if matches[-1]["polarity"] == "positive" else "no"
         return "no" if known else "unknown"
-    monkeypatch.setattr(epar_nas, "verdict", no_override)
-    assert verdict_of(KNOWN, SINCE) == "yes"  # should be "unknown"
+    monkeypatch.setattr(epar_nas, "verdict", v2)
+    assert verdict_of(KNOWN_VALSARTAN, POS_SACUBITRIL) == "unknown"  # should be "yes"
+
+
+def test_mutant_verb_negation_window_too_wide_is_caught(monkeypatch):
+    monkeypatch.setattr(epar_nas, "VERB_TOKENS", 30)
+    assert SINCE in failures()
+    assert verdict_of(SINCE) == "no"  # the harm
+
+
+def test_mutant_verb_negation_ignored_is_caught(monkeypatch):
+    monkeypatch.setattr(epar_nas, "_negated_verb", lambda s: False)
+    assert DID_NOT in failures() and DOES_NOT in failures()
+    assert verdict_of(DID_NOT) == "yes"  # the harm

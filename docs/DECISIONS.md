@@ -104,3 +104,17 @@ the original rule keeps priority; fallback tiers accept the "-0" suffix, names
 without "epar-" or without "public-", and the usual public-assessment-report
 name in another folder; variation reports never count. Of the 11 candidates
 without a link, 10 are found; Evkeeza stays unknown.
+
+## 2026-10-23: EPAR rule version 2.1
+
+Rule version 2 left 74 of 568 candidates unknown (13 %), above 10 % in 9 of 12
+years. Version 2.1 (chosen from sentence wording, not from the comparison with
+EMA's counts, which had been seen after version 2): a negation within 2
+tokens before a conclusion verb also makes a match negative (in addition to
+4 tokens before the phrase), so "did not consider that X is a new active
+substance" is a no; a conclusion sentence decides over the "known active
+substance" no-signal, which gives "no" only when the report has no conclusion
+sentence (combination products such as valsartan with sacubitril). The
+far-negation limitation is removed from KNOWN-LIMITATIONS. PREREG version 4
+records that no further rule changes are made; primary EMA unit is yes only,
+unknown included is a sensitivity analysis.
