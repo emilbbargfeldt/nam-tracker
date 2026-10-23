@@ -176,3 +176,25 @@ def test_flag_regex_ignores_comments_urls_and_decimals():
 def test_conflicting_duplicate_flag_is_error():
     with pytest.raises(TocParseError):
         parse_flags("var pdfFiles = {\npharmR: 1, pharmR: 0,\nintegratedR: 0,\nmultidisciplineR: 0\n};")
+
+
+def test_v2_rule_integrated_counts_and_format_priority():
+    from studies.nam.inventory.fda_titles import format_of, has_nonclinical
+    assert has_nonclinical({"integrated"}) and not has_nonclinical(set())
+    assert format_of({"integrated", "pharmtox"}) == "integrated"
+    assert format_of({"multidisc"}) == "multidisc"
+    assert format_of({"pharmtox"}) == "separate"
+    assert format_of(set()) == "none"
+
+
+def test_ingredient_fallback_for_row_without_name():
+    products = [{"ApplNo": "7", "DrugName": "Pretx", "ActiveIngredient": "PRETOMANID"}]
+    apps = [{"ApplNo": "7", "ApplType": "NDA"}]
+    subs = [{"ApplNo": "7", "SubmissionType": "ORIG", "SubmissionStatus": "AP",
+             "SubmissionStatusDate": "2019-08-14 00:00:00"}]
+    rows = [{"name": "", "ingredient": "pretomanid", "appl_no": None,
+             "approved": date(2019, 8, 14)}]
+    out = fda.resolve_rows(rows, 2019, products, apps, subs)
+    assert out[0]["appl_no"] == "7"
+    assert "appl_no from ingredient match" in out[0]["notes"]
+    assert fda.match_by_ingredient(products, apps, "pretomanid", 2018, subs) is None

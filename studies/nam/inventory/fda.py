@@ -143,6 +143,24 @@ def match_by_name(products, applications, name, year=None, submissions=()):
     return hits.pop() if len(hits) == 1 else None
 
 
+def match_by_ingredient(products, applications, ingredient, year, submissions):
+    """Unique NDA/BLA application with this active ingredient and ORIG
+    approval in the given year, else None."""
+    types = {a["ApplNo"]: a["ApplType"].strip() for a in applications}
+    want = norm_name(ingredient)
+    if not want:
+        return None
+    hits = {p["ApplNo"] for p in products
+            if norm_name(p["ActiveIngredient"]) == want
+            and types.get(p["ApplNo"]) in ("NDA", "BLA")}
+    keep = set()
+    for h in hits:
+        d = orig_approval_date(submissions, h)
+        if d is not None and d.year == year:
+            keep.add(h)
+    return keep.pop() if len(keep) == 1 else None
+
+
 def validate_page(rows, year):
     """Return a list of problems: empty page, gaps/duplicates in No., duplicate appl_no."""
     if not rows:
@@ -176,6 +194,12 @@ def resolve_rows(rows, page_year, products, applications, submissions):
             if found:
                 r["appl_no"] = found
                 r["notes"].append("appl_no from name match")
+        if r["appl_no"] is None and r.get("ingredient"):
+            found = match_by_ingredient(products, applications, r["ingredient"],
+                                        page_year, submissions)
+            if found:
+                r["appl_no"] = found
+                r["notes"].append("appl_no from ingredient match")
         ok = r["approved"] is not None and r["approved"].year == page_year
         if not ok:
             r["notes"].append("list date unusable: %s" % r["approved"])

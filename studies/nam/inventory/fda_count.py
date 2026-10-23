@@ -5,8 +5,8 @@ import zipfile
 from collections import defaultdict
 
 from . import fda
-from .fda_titles import (TocParseError, categories, has_strict_nonclinical,
-                         parse_flags)
+from .fda_titles import (TocParseError, categories, format_of, has_nonclinical,
+                         has_strict_nonclinical, parse_flags)
 from .fetch import Fetcher
 
 REVIEW_TYPE_IDS = ("3", "21")  # Review, Summary Review
@@ -61,8 +61,10 @@ def count_year(rows, docs_by_appl, apps, toc_pages):
                     c[cat] += 1
                 if has_strict_nonclinical(cats):
                     c["strict_nonclinical"] += 1
-                if has_strict_nonclinical(cats) or "integrated" in cats:
-                    c["strict_or_integrated"] += 1
+                if has_nonclinical(cats):
+                    c["nonclinical"] += 1
+                c["format_" + format_of(cats)] += 1
+                rec["format"] = format_of(cats)
             elif unparsed:
                 c["toc_unparsed"] += 1
             elif missing:

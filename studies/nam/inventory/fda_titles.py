@@ -8,8 +8,13 @@ Categories:
                                       "Pharmacology/Toxicology Review")
   multidisc    flag multidisciplineR  "Multi-Discipline Review"
   integrated   flag integratedR       "Integrated Review" (kept apart)
-Strict nonclinical = pharmtox or multidisc. Integrated reviews are reported
-separately and are not counted as nonclinical until decided.
+Strict nonclinical = pharmtox or multidisc. Since PREREG version 2 an
+integrated review also counts as a non-clinical document (has_nonclinical);
+the strict count is kept for comparison.
+
+Document format per drug (format_of): integrated if an Integrated Review
+exists, else multidisc if a Multi-Discipline Review exists, else separate if
+a Non-Clinical Review exists, else none.
 """
 import re
 
@@ -53,3 +58,15 @@ def categories(flags):
 
 def has_strict_nonclinical(cats):
     return any(c in cats for c in STRICT)
+
+
+def has_nonclinical(cats):
+    return has_strict_nonclinical(cats) or "integrated" in cats
+
+
+def format_of(cats):
+    for cat, label in (("integrated", "integrated"), ("multidisc", "multidisc"),
+                       ("pharmtox", "separate")):
+        if cat in cats:
+            return label
+    return "none"

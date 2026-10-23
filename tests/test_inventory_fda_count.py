@@ -33,7 +33,9 @@ def test_known_answer():
     assert c["with_review_docs"] == 3
     assert c["strict_nonclinical"] == 1
     assert c["integrated"] == 1
-    assert c["strict_or_integrated"] == 2
+    assert c["nonclinical"] == 2
+    assert c["format_separate"] == 1 and c["format_integrated"] == 1
+    assert c["format_none"] == 1
     assert c["no_toc"] == 1
 
 

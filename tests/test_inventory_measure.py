@@ -117,3 +117,9 @@ def test_measure_result_has_only_numbers(tmp_path):
     m = measure.measure(p)
     assert all(isinstance(v, (int, float, list)) for v in m.values())
     assert all(isinstance(c, int) for c in m["chars_per_page"])
+
+
+def test_order_matches_draw():
+    from studies.nam.inventory.sample import order
+    c = ["d%02d" % i for i in range(20)]
+    assert order(c, "EMA", 2019)[:2] == draw(c, 2, "EMA", 2019)[0]
