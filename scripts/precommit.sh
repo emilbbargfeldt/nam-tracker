@@ -35,15 +35,22 @@ if [ $? -gt 1 ] || [ -z "$PATTERNS" ]; then
     echo "precommit: denylist empty or unreadable, commit blocked" >&2
     exit 1
 fi
-DIFF="$(git diff --cached)" || { echo "precommit: git diff failed" >&2; exit 1; }
+DIFF="$(git -c core.quotepath=off diff --cached)" || { echo "precommit: git diff failed" >&2; exit 1; }
 if printf '%s\n' "$DIFF" | /usr/bin/grep -F -i -q -f <(printf '%s\n' "$PATTERNS"); then
     echo "precommit: staged diff matches the denylist (match not shown)" >&2
     exit 1
 fi
 
-# (b2) added lines must be ASCII only
-if printf '%s\n' "$DIFF" | /usr/bin/grep -P '^\+[^+]' | LC_ALL=C /usr/bin/grep -q -P '[^\x00-\x7F]'; then
+# (b2) staged changes must be ASCII only (bytes, any locale; file names too)
+if printf '%s\n' "$DIFF" | LC_ALL=C /usr/bin/grep -a -P '^\+' | LC_ALL=C /usr/bin/grep -a -q -P '[^\x00-\x7F]'; then
     echo "precommit: non-ASCII characters in staged changes" >&2
+    exit 1
+fi
+
+# (b3) no binary files (numstat shows "-" for binary)
+NUMSTAT="$(git -c core.quotepath=off diff --cached --numstat)" || { echo "precommit: git diff failed" >&2; exit 1; }
+if printf '%s\n' "$NUMSTAT" | /usr/bin/grep -q -P '^-\t-\t'; then
+    echo "precommit: binary file in staged changes, commit blocked" >&2
     exit 1
 fi
 
