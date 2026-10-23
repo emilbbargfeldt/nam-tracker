@@ -109,6 +109,7 @@ def test_summarize_counts():
     assert s["chars"] == 199 + 10
     assert s["chars_nonblank"] == 100 + 10
     assert s["low_text_pages"] == 1  # the 10-character page; 100 counts as text
+    assert s["chars_low"] == 10
 
 
 def test_found_share_by_group():
@@ -137,3 +138,29 @@ def test_mutant_end_equals_start_is_caught(monkeypatch):
     monkeypatch.setattr(section, "_number", lambda line: None)
     monkeypatch.setattr(section, "_CLINICAL", re.compile(r"(?!x)x"))
     assert section.from_headings(PAGES) != (3, 6, 1)
+
+
+def test_headings_numbered_beats_earlier_unnumbered_cover_line():
+    pages = ["Nonclinical Reviewer: signature", "x", "5 Nonclinical Pharmacology",
+             "text", "6 Clinical Pharmacology", "end"]
+    assert section.from_headings(pages) == (3, 5, 2)
+
+
+def test_bookmarks_numbered_beats_earlier_unnumbered():
+    items = section.parse_outline(
+        "<outline><item page=\"1\">Nonclinical reviewer</item>"
+        "<item page=\"9\">5 Nonclinical Pharmacology</item>"
+        "<item page=\"15\">6 Clinical</item></outline>")
+    assert section.from_bookmarks(items, 40) == (9, 15, 2)
+
+
+def test_pharmtox_format_is_whole_document():
+    loc = section.locate("pharmtox", "", ["a", "b"])
+    assert (loc["found"], loc["basis"], loc["end"]) == (True, "document type", 2)
+
+
+def test_mutant_unnumbered_first_is_caught(monkeypatch):
+    monkeypatch.setattr(section, "_number", lambda line: None)
+    pages = ["Nonclinical Reviewer: signature", "x", "5 Nonclinical Pharmacology",
+             "text", "6 Clinical Pharmacology", "end"]
+    assert section.from_headings(pages) != (3, 5, 2)

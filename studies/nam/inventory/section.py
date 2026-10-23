@@ -6,9 +6,12 @@ non-clinical section as a whole. If the section cannot be located, the whole
 document is passed on and logged (PREREG v3 b). Only page numbers and
 character counts leave this module; no text is printed or stored.
 
-Rules (fixed before the run):
- - Bookmarks: start = first bookmark with a title word at the shallowest
-   level that has one; end = page of the next bookmark at the same or a
+Rules (fixed before the run; the numbered-first preference was added after
+a first run showed that unnumbered matches are mostly cover and signature
+pages, using page numbers and counts only):
+ - Among matches, a numbered one beats an unnumbered one, then the shallowest
+   level (fewest number parts), then the earliest.
+ - Bookmarks: start = the preferred bookmark with a title word; end = page of the next bookmark at the same or a
    shallower level (that page is included), else the last page.
  - Headings: start = first heading-like line (<= 90 characters, not a table
    of contents line) with a title word; end = page of the first later
@@ -16,6 +19,8 @@ Rules (fixed before the run):
    start (higher number, no deeper, first number at most one higher), or for
    an unnumbered start the first later heading beginning with "Clinical";
    else the last page.
+ - Formats "separate" and "pharmtox" (a separate non-clinical review) are the
+   section as a whole.
 
 Usage: NAM_DATA=... python -I -m studies.nam.inventory.section
 """
@@ -31,6 +36,8 @@ from .fetch import Fetcher
 _TOKEN = re.compile(r'<(/?)outline>|<item[^>]*?page="(\d+)"[^>]*>(.*?)</item>', re.S)
 _NUMBER = re.compile(r"^\s*(\d+(?:\.\d+)*)\.?\s+\S")
 _CLINICAL = re.compile(r"^\s*(?:\d+(?:\.\d+)*\.?\s+)?clinical\b", re.I)
+_TITLE_NUMBER = re.compile(r"^\s*\d+(?:\.\d+)*\.?\s")
+WHOLE_DOCUMENT = ("separate", "pharmtox")
 _TOC_LINE = re.compile(r"\.{4,}|(?:\.\s){3,}|\s\d{1,4}\s*$")
 
 
@@ -51,8 +58,8 @@ def from_bookmarks(items, n_pages):
     hits = [i for i, (_, _, t) in enumerate(items) if outline.title_matches(t)]
     if not hits:
         return None
-    top = min(items[i][0] for i in hits)
-    first = next(i for i in hits if items[i][0] == top)
+    first = min(hits, key=lambda i: (
+        0 if _TITLE_NUMBER.match(items[i][2]) else 1, items[i][0], i))
     level, start = items[first][0], items[first][1]
     end = n_pages
     for lvl, page, _ in items[first + 1:]:
@@ -86,7 +93,8 @@ def from_headings(pages):
             if outline._HEADING.match(ln) and not _TOC_LINE.search(ln)]
     if not hits:
         return None
-    first = hits[0]
+    first = min(hits, key=lambda i: (
+        0 if _number(lines[i][1]) else 1, len(_number(lines[i][1]) or ()), i))
     start, line = lines[first]
     num = _number(line)
     end = len(pages)
@@ -108,7 +116,7 @@ def from_headings(pages):
 def locate(fmt, xml, pages):
     """Return dict(found, basis, start, end, n_matches)."""
     n = len(pages)
-    if fmt == "separate":
+    if fmt in WHOLE_DOCUMENT:
         return {"found": True, "basis": "document type", "start": 1, "end": n,
                 "n_matches": 0}
     tries = [("bookmarks", lambda: from_bookmarks(parse_outline(xml), n)),
@@ -136,7 +144,8 @@ def summarize(loc, pages, threshold=measure.TEXT_LAYER_MIN_CHARS):
             "n_matches": loc["n_matches"],
             "chars": sum(c for c, _ in sec),
             "chars_nonblank": sum(b for _, b in sec),
-            "low_text_pages": sum(1 for _, b in sec if b < threshold)}
+            "low_text_pages": sum(1 for _, b in sec if b < threshold),
+            "chars_low": sum(c for c, b in sec if b < threshold)}
 
 
 def _run(cmd):
@@ -151,7 +160,7 @@ def analyse_pdf(path, fmt):
     if pages and pages[-1] == "":
         pages = pages[:-1]
     xml = ""
-    if fmt != "separate":
+    if fmt not in WHOLE_DOCUMENT:
         xml = _run(["pdftohtml", "-xml", "-stdout", "-i", "-q", str(path)])
     return summarize(locate(fmt, xml, pages), pages)
 

@@ -8,7 +8,7 @@ import statistics as st
 import sys
 import zipfile
 
-from . import claim80, ema, estimates, fda, measure
+from . import claim80, ema, estimates, fda, measure, report_step2
 from .fetch import Fetcher
 from .xlsx import read_xlsx
 
@@ -38,13 +38,11 @@ def open_section(w, yc, epar, samp, cc, ema_py):
     hl = sum(v["highlights"] for v in cc["crosscheck"].values())
     dev = sum(v["dev_opinion"] for v in cc["crosscheck"].values())
     w("1. **EMA definition B over-counts by about %.0f %% against EMA's own counts** "
-      "(%+d on %d, 2015-2025, counted by opinion year; %d B rows have no opinion date, "
-      "so the gap is if anything larger). The causes are not examined row by row (a "
-      "check of identical new-substance sets found few duplicates). Proposal: in the full run, extract the EPAR's own statement of "
-      "whether the medicine has a new active substance (a metadata field, not an "
-      "outcome) and use it as the final unit definition. B then becomes a candidate "
-      "list only. The 2021 EMA figure (54) still needs a manual check.\n"
-      % (100.0 * dev / hl, dev, hl, 41))
+      "(%+d on %d, 2015-2025, counted by opinion year). Resolved by PREREG v3 (a): "
+      "the unit is the EPAR's own statement of new active substance status; B is a "
+      "candidate list only. See the section 'EMA unit' for the effect and the "
+      "unknown share per year. The 2021 EMA figure (54) still needs a manual check.\n"
+      % (100.0 * dev / hl, dev, hl))
     # 2 scope
     w("2. **Scope: total pages in the universe.** Estimated from the sample mean pages "
       "per year and authority times the number of documents that year (FDA: drugs with "
@@ -75,21 +73,15 @@ def open_section(w, yc, epar, samp, cc, ema_py):
       "(only if the pilot shows it loses no A findings) is needed.\n"
       % format(tot, ","))
     # 3 OCR
-    fda_recs = {s["year"]: s["picked"] for s in samp if s["authority"] == "FDA"}
-    early = [r for y in (2015, 2016, 2017) for r in fda_recs[y]]
-    tp = sum(r["text_pages"] for r in early)
-    tt = sum(r["pages"] for r in early)
-    n_early = sum(yc[y].get("nonclinical", 0) for y in (2015, 2016, 2017))
-    w("3. **FDA 2015-2017 has a low text layer** (sample: %d of %d pages, %.0f %%; per "
-      "year 0.42, 0.79, 0.76; %d drugs with a non-clinical document in those years). "
-      "A decision on OCR is needed: OCR those documents, accept lower recall there, or "
-      "exclude the years. Text quality after OCR is measured in the pilot.\n"
-      % (tp, tt, 100.0 * tp / tt, n_early))
+    w("3. **OCR.** Decided in PREREG v3 (c): every page below the threshold is OCR'd, "
+      "all years and both agencies. The scope is in the section 'OCR scope'. OCR "
+      "software is not installed yet and text quality after OCR is measured in the "
+      "pilot.\n")
     # 4 power
     w("4. **Power for question 2** (one-sided z test, alpha 0.05, power 80 %, normal "
       "approximation; counts only). Before = approved 2015-2022, after = approved "
-      "2024-2026 (2023 excluded). Counts are the universe (EMA: definition B; FDA: "
-      "drugs on the novel list), not the analysable subset. With a low baseline and few "
+      "2024-2026 (2023 excluded). Counts are the universe (EMA: unit yes by approval year, "
+      "PREREG v4; FDA: drugs on the novel list), not the analysable subset. With a low baseline and few "
       "expected events the approximation is rough.\n")
     nb_e = sum(ema_py[y] for y in range(2015, 2023))
     na_e = sum(ema_py[y] for y in (2024, 2025, 2026))
@@ -110,8 +102,9 @@ def open_section(w, yc, epar, samp, cc, ema_py):
     w("PREREG: if power is below 50 % for a doubling of the share, question 2 is "
       "reported as information only. The last column is that power.\n")
     # 5 missing
-    w("5. **Still missing from Phase 0:** time and model usage per document on 3 "
-      "documents outside the sample and the pilot, and the choice of model.\n")
+    w("5. **Still missing from Phase 0:** model speed and quality (measured in the "
+      "pilot and, for a local model, on the second machine) and the choice of model. "
+      "Token counts and API prices are in the section 'Cost'.\n")
 
 
 def main():
@@ -330,7 +323,20 @@ def main():
          100 * sum(c.get("strict_nonclinical", 0) for c in yc.values()) / fd,
          sum(1 for r in epar if r["error"])))
 
-    open_section(w, yc, epar, samp, cc, ema_py)
+    nas_epar = json.loads((der / "ema_nas_epar.json").read_text())
+    layer1 = json.loads((der / "layer1.json").read_text())
+    report_step2.ema_unit_section(w, nas_epar, cc)
+    report_step2.layer1_section(w, layer1)
+    fda_counts = {y: yc[y].get("nonclinical", 0) for y in range(2015, 2027)}
+    ema_yes = {y: sum(1 for r in nas_epar if r["year"] == y and r["verdict"] == "yes")
+               for y in range(2015, 2027)}
+    ema_b = {y: sum(1 for r in epar if r["year"] == y and r["report"])
+             for y in range(2015, 2027)}
+    ema_yu = {y: sum(1 for r in nas_epar if r["year"] == y
+                     and r["verdict"] in ("yes", "unknown")) for y in range(2015, 2027)}
+    report_step2.cost_section(w, layer1, fda_counts, ema_yes, ema_b, ema_yu)
+    report_step2.ocr_section(w, samp, layer1, fda_counts, ema_yes)
+    open_section(w, yc, epar, samp, cc, ema_yes)
     sys.stdout.write("\n".join(out))
 
 

@@ -118,3 +118,32 @@ sentence (combination products such as valsartan with sacubitril). The
 far-negation limitation is removed from KNOWN-LIMITATIONS. PREREG version 4
 records that no further rule changes are made; primary EMA unit is yes only,
 unknown included is a sensitivity analysis.
+
+## 2026-10-23: Layer 1 section finder, numbered match first
+
+First run on the 48 sample documents: unnumbered title matches were mostly
+cover, signature and contents lines (sections of one page and 250 characters).
+Rule added using page numbers and counts only: a numbered match beats an
+unnumbered one, then the shallowest, then the earliest. Separate non-clinical
+reviews (format "pharmtox" in the sample) are the section as a whole. All 48
+sections were found; three FDA sections of one page (Qulipta, Welireg,
+Pombiliti) are flagged as short and are to be checked by page number. Layer 1
+sees no codebook word and no outcome.
+
+## 2026-10-23: OCR for every page below the threshold, all years
+
+OCR is applied to every page below 100 characters, in all years and for both
+agencies (PREREG v3 c); the earlier open choice to exclude FDA 2015-2017 or
+accept lower recall is dropped. Only the scope is measured (sample pages below
+the threshold, projected to the universe, whole document and layer 1 section);
+no OCR has been run and no OCR software is installed.
+
+## 2026-10-23: Cost from token counts after layer 1
+
+Cost is estimated as characters / 4 over the layer 1 section, with low-text
+pages imputed by the median characters per text page of the same authority.
+Prices are the Anthropic list prices fetched 2026-10-23 (two Anthropic pages
+agree); input only, output and instruction text are not included. The pages
+give no token quota for Claude Code Pro, so the number of sessions is shown
+only under assumed capacities. Model speed and quality are measured in the
+pilot; for a local model only tokens are given.

@@ -113,18 +113,18 @@ Table columns used: Category (Human), Medicine status, Active substance, Generic
 | Approval year | New active substances (B) | With EPAR assessment report | Without |
 |---|---|---|---|
 | 2015 | 53 | 53 | 0 |
-| 2016 | 43 | 42 | 1 |
-| 2017 | 39 | 38 | 1 |
-| 2018 | 51 | 49 | 2 |
+| 2016 | 43 | 43 | 0 |
+| 2017 | 39 | 39 | 0 |
+| 2018 | 51 | 51 | 0 |
 | 2019 | 37 | 37 | 0 |
 | 2020 | 51 | 51 | 0 |
-| 2021 | 55 | 53 | 2 |
+| 2021 | 55 | 54 | 1 |
 | 2022 | 63 | 63 | 0 |
 | 2023 | 42 | 42 | 0 |
-| 2024 | 48 | 46 | 2 |
-| 2025 | 49 | 48 | 1 |
-| 2026 | 37 | 35 | 2 |
-| all | 568 | 557 | 11 |
+| 2024 | 48 | 48 | 0 |
+| 2025 | 49 | 49 | 0 |
+| 2026 | 37 | 37 | 0 |
+| all | 568 | 567 | 1 |
 
 Date field: marketing authorisation date is the source for 1987 of 1993 human rows with a date; the European Commission decision date is the fallback for 6 (status authorised at some point). Where both dates exist (1954 rows) the two differ in 1920 rows; the EC date is on or after the authorisation date in 1951 of them, so it looks like a later decision, which is an observation and not verified against EMA's column description. Unparsable dates: 0. Unknown statuses: none. Rows without a substance: 20 (empty in the source); parts made only of salt words are kept unchanged: 1 row(s). Substances with same-day sibling products: 54 (such ties count as new for both products, which inflates definition B). The 6 fallback-dated rows (Pavblu 2026-09-18 Authorised; Tolvaptan Accord 2026-01-09 Authorised; Jeraygo 2026-01-29 Authorised; Lyvdelzi (previously Seladelpar Gilead) 2025-12-05 Authorised; Enzalutamide Accordpharma 2026-01-09 Authorised; Zurzuvae 2025-10-30 Authorised) may be dated too late if the EC date is a later decision; they are listed here and not removed.
 
@@ -232,39 +232,253 @@ Both permit reuse with attribution; whether quotes of reasonable length and codi
 |---|---|---|---|---|
 | FDA (2015-2026) | 541 | 558 | 97.0 % | yes |
 | FDA (2015-2025) | 503 | 511 | 98.4 % | yes |
-| EMA (2015-2026) | 557 | 568 | 98.1 % | yes |
+| EMA (2015-2026) | 567 | 568 | 99.8 % | yes |
 
 This measures that a document of the right type exists, not that it contains usable non-clinical content (redaction, scans). The FDA 2026 part year is included, and the 17 FDA drugs without a read TOC count as missing. FDA counts Integrated Reviews (PREREG v2); on the strict definition the share is 76.2 %. EMA is based on the existence of the public assessment-report link on the medicine page; 0 medicine pages could not be fetched and count as missing.
 
+## EMA unit: new active substance status from the EPAR (PREREG v3 a, v4)
+
+Rule `epar_nas.py` version 2.1, committed before the run (versions 1 and 2 were revised after the 10 % unknown stop rule; see DECISIONS): a sentence with 'new active substance', a conclusion verb (consider, qualif, conclud, agree) and no applicant word (applicant, requested, claim, declared, indicated) is a conclusion match; it is negative if a negation stands within 4 tokens before the phrase or within 2 tokens before a verb. The last conclusion match in document order decides (yes/no); with no conclusion sentence, 'known active substance' anywhere gives no; otherwise unknown. Primary EMA unit: yes only (PREREG v4); unknown is a sensitivity analysis. Only the verdict and page and sentence numbers were stored. Rule version in the data: ['2.1'].
+
+| Approval year | B candidates | yes | no | unknown | Unknown share |
+|---|---|---|---|---|---|
+| 2015 | 53 | 42 | 8 | 3 | 6 % |
+| 2016 | 43 | 28 | 12 | 3 | 7 % |
+| 2017 | 39 | 29 | 4 | 6 | 15 % |
+| 2018 | 51 | 43 | 4 | 4 | 8 % |
+| 2019 | 37 | 29 | 6 | 2 | 5 % |
+| 2020 | 51 | 36 | 12 | 3 | 6 % |
+| 2021 | 55 | 47 | 5 | 3 | 5 % |
+| 2022 | 63 | 55 | 3 | 5 | 8 % |
+| 2023 | 42 | 34 | 3 | 5 | 12 % |
+| 2024 | 48 | 37 | 1 | 10 | 21 % |
+| 2025 | 49 | 43 | 2 | 4 | 8 % |
+| 2026 | 37 | 30 | 2 | 5 | 14 % |
+| all | 568 | 453 | 62 | 53 | 9 % |
+
+Stop rule (unknown above 10 % in any year): TRIGGERED for 2017, 2023, 2024, 2026. PREREG v4 records that no further rule changes are made.
+
+What the unknown candidates are (PREREG v4 states that they are mainly EPARs that do not reproduce the CHMP conclusion; this table is the count behind that statement, the wording of those reports has not been read):
+
+| Unknown because | Candidates |
+|---|---|
+| no report or error | 1 |
+| phrase absent from the report | 18 |
+| phrase present, no qualifying sentence | 34 |
+
+Comparison with EMA's own counts by CHMP opinion year (candidates counted by their opinion date; 41 candidates have no opinion date and are in no row, which lowers yes and unknown). The comparison with EMA's counts was first seen after rule version 2.
+
+| Year | EMA overview | B | B deviation | yes | yes deviation | yes + unknown | yes + unknown deviation |
+|---|---|---|---|---|---|---|---|
+| 2015 | 39 | 41 | +2 | 31 | -8 | 34 | -5 |
+| 2016 | 27 | 36 | +9 | 25 | -2 | 30 | +3 |
+| 2017 | 35 | 40 | +5 | 33 | -2 | 36 | +1 |
+| 2018 | 42 | 40 | -2 | 33 | -9 | 35 | -7 |
+| 2019 | 30 | 37 | +7 | 30 | +0 | 33 | +3 |
+| 2020 | 39 | 52 | +13 | 34 | -5 | 37 | -2 |
+| 2021 | 54 | 58 | +4 | 51 | -3 | 55 | +1 |
+| 2022 | 42 | 50 | +8 | 43 | +1 | 46 | +4 |
+| 2023 | 39 | 44 | +5 | 37 | -2 | 40 | +1 |
+| 2024 | 46 | 57 | +11 | 46 | +0 | 55 | +9 |
+| 2025 | 38 | 45 | +7 | 41 | +3 | 44 | +6 |
+| 2015-2025 | 431 | 500 | +69 (+16 %) | 404 | -27 (-6 %) | 445 | +14 (+3 %) |
+
+Spot check (seed 20261023): look up the page and sentence number in the report (sentences counted per page from 1, split after . ; ! ? before a capital letter). 'decisive' is the last conclusion match.
+
+| Verdict | Drug | Approval year | EPAR | Position |
+|---|---|---|---|---|
+| yes | Oxervate | 2017 | https://www.ema.europa.eu/en/documents/assessment-report/oxervate-epar-public-assessment-report_en.pdf | decisive p104 s8 (positive) |
+| yes | Briumvi | 2023 | https://www.ema.europa.eu/en/documents/assessment-report/briumvi-epar-public-assessment-report_en.pdf | decisive p129 s3 (positive) |
+| yes | Ebglyss | 2023 | https://www.ema.europa.eu/en/documents/assessment-report/ebglyss-epar-public-assessment-report_en.pdf | decisive p209 s5 (positive) |
+| yes | Praluent | 2015 | https://www.ema.europa.eu/en/documents/assessment-report/praluent-epar-public-assessment-report_en.pdf | decisive p134 s4 (positive) |
+| yes | Orkambi | 2015 | https://www.ema.europa.eu/en/documents/assessment-report/orkambi-epar-public-assessment-report_en.pdf | decisive p104 s1 (positive) |
+| no | Filsuvez | 2022 | https://www.ema.europa.eu/en/documents/assessment-report/filsuvez-epar-public-assessment-report_en.pdf | known-signal p43 s14 |
+| no | Bopediat | 2026 | https://www.ema.europa.eu/en/documents/assessment-report/bopediat-epar-public-assessment-report_en.pdf | known-signal p16 s15 |
+| no | Skytrofa (previously Lonapegsomatropin Ascendis Pharma) | 2022 | https://www.ema.europa.eu/en/documents/assessment-report/lonapegsomatropin-ascendis-pharma-epar-public-assessment-report_en.pdf | known-signal p114 s9 |
+| no | Baqsimi | 2019 | https://www.ema.europa.eu/en/documents/assessment-report/baqsimi-epar-public-assessment-report_en.pdf | known-signal p7 s11 |
+| no | Feraccru | 2016 | https://www.ema.europa.eu/en/documents/assessment-report/feraccru-epar-public-assessment-report_en.pdf | decisive p105 s6 (negative) |
+| unknown | Penbraya | 2024 | https://www.ema.europa.eu/en/documents/assessment-report/penbraya-epar-public-assessment-report_en.pdf | none |
+| unknown | Amglidia | 2018 | https://www.ema.europa.eu/en/documents/assessment-report/amglidia-epar-public-assessment-report_en.pdf | none |
+| unknown | Celldemic | 2024 | https://www.ema.europa.eu/en/documents/assessment-report/celldemic-epar-public-assessment-report_en.pdf | none |
+| unknown | Chenodeoxycholic acid Leadiant (previously Chenodeoxycholic acid sigma-tau) | 2017 | https://www.ema.europa.eu/en/documents/assessment-report/chenodeoxycholic-acid-sigma-tau-epar-public-assessment-report_en.pdf | phrase at p9 s10 |
+| unknown | Agilus | 2024 | https://www.ema.europa.eu/en/documents/assessment-report/agilus-epar-public-assessment-report_en.pdf | phrase at p14 s2 |
+
+Verdicts 'no' that rest on the known-signal alone (no conclusion sentence): 41 of 62.
+
+## Layer 1: non-clinical section of the sample (PREREG v3 b)
+
+Located by bookmarks, else heading-like lines, with the section-title words of `outline.py`; a numbered match beats an unnumbered one (cover and signature pages carry unnumbered matches; added after a first run, from page numbers only). Separate non-clinical reviews are the section as a whole. Characters are counted with whitespace folded. 'Low' = pages in the section below the text-layer threshold (100 characters). Short sections (under 3 pages) are marked: they may be right (integrated reviews are brief) or a heading found next to its successor; they are not corrected and should be checked by page number.
+
+| Authority | Year | Drug | Format | Pages | Section pages | Found | Basis | Pages (from-to) | Characters | Low | Flag |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| FDA | 2015 | Uptravi | separate | 379 | 379 | yes | document type | 1-379 | 221031 | 216 |  |
+| FDA | 2015 | Alecensa | separate | 154 | 154 | yes | document type | 1-154 | 109666 | 91 |  |
+| FDA | 2016 | Rubraca | multidisc | 232 | 11 | yes | headings | 32-42 | 25148 | 0 |  |
+| FDA | 2016 | Nuplazid | separate | 218 | 218 | yes | document type | 1-218 | 263251 | 74 |  |
+| FDA | 2017 | Parsabiv | separate | 186 | 186 | yes | document type | 1-186 | 286948 | 30 |  |
+| FDA | 2017 | Austedo | separate | 98 | 98 | yes | document type | 1-98 | 89465 | 38 |  |
+| FDA | 2018 | Biktarvy | multidisc | 435 | 12 | yes | headings | 39-50 | 22650 | 0 |  |
+| FDA | 2018 | Tegsedi | separate | 134 | 134 | yes | document type | 1-134 | 203208 | 12 |  |
+| FDA | 2019 | Ubrelvy | separate | 52 | 52 | yes | document type | 1-52 | 66756 | 1 |  |
+| FDA | 2019 | Reblozyl | separate | 38 | 38 | yes | document type | 1-38 | 56120 | 4 |  |
+| FDA | 2020 | Pizensy | multidisc | 150 | 8 | yes | headings | 30-37 | 16718 | 0 |  |
+| FDA | 2020 | Pemazyre | multidisc | 202 | 32 | yes | bookmarks | 33-64 | 72303 | 0 |  |
+| FDA | 2021 | Qulipta | integrated | 280 | 1 | yes | headings | 34-34 | 3092 | 0 | short |
+| FDA | 2021 | Welireg | multidisc | 255 | 1 | yes | headings | 201-201 | 1292 | 0 | short |
+| FDA | 2022 | Vonjo | integrated | 292 | 3 | yes | bookmarks | 37-39 | 9901 | 0 |  |
+| FDA | 2022 | Vabysmo | separate | 53 | 53 | yes | document type | 1-53 | 88251 | 2 |  |
+| FDA | 2023 | Columvi | multidisc | 322 | 31 | yes | headings | 40-70 | 62266 | 0 |  |
+| FDA | 2023 | Pombiliti | integrated | 315 | 1 | yes | headings | 48-48 | 2016 | 0 | short |
+| FDA | 2024 | Lumisight | multidisc | 145 | 21 | yes | bookmarks | 28-48 | 46710 | 0 |  |
+| FDA | 2024 | Letybo | multidisc | 107 | 5 | yes | bookmarks | 38-42 | 11813 | 0 |  |
+| FDA | 2025 | Voyxact | integrated | 218 | 3 | yes | bookmarks | 35-37 | 7017 | 0 |  |
+| FDA | 2025 | Jascayd | integrated | 419 | 3 | yes | bookmarks | 36-38 | 6546 | 0 |  |
+| FDA | 2026 | Zenbexus | multidisc | 329 | 53 | yes | bookmarks | 45-97 | 61785 | 31 |  |
+| FDA | 2026 | Utebzi | integrated | 484 | 5 | yes | bookmarks | 58-62 | 14417 | 0 |  |
+| EMA | 2015 | Xadago | epar | 118 | 17 | yes | headings | 16-32 | 58732 | 0 |  |
+| EMA | 2015 | Entresto | epar | 115 | 15 | yes | bookmarks | 19-33 | 50948 | 0 |  |
+| EMA | 2016 | Rekovelle | epar | 95 | 7 | yes | bookmarks | 17-23 | 25007 | 0 |  |
+| EMA | 2016 | Ibrance | epar | 140 | 12 | yes | bookmarks | 21-32 | 35147 | 0 |  |
+| EMA | 2017 | Veltassa | epar | 73 | 9 | yes | bookmarks | 17-25 | 25576 | 0 |  |
+| EMA | 2017 | Ledaga | epar | 76 | 13 | yes | bookmarks | 15-27 | 48596 | 0 |  |
+| EMA | 2018 | Mylotarg | epar | 138 | 31 | yes | bookmarks | 21-51 | 76754 | 4 |  |
+| EMA | 2018 | Rubraca | epar | 167 | 21 | yes | bookmarks | 20-40 | 71204 | 0 |  |
+| EMA | 2019 | Talzenna | epar | 140 | 21 | yes | bookmarks | 19-39 | 59449 | 0 |  |
+| EMA | 2019 | Mulpleo (previously Lusutrombopag Shionogi) | epar | 142 | 11 | yes | headings | 17-27 | 35240 | 0 |  |
+| EMA | 2020 | Xenleta | epar | 165 | 12 | yes | bookmarks | 29-40 | 36735 | 0 |  |
+| EMA | 2020 | Atectura Breezhaler | epar | 182 | 16 | yes | bookmarks | 21-36 | 46870 | 0 |  |
+| EMA | 2021 | Ontozry | epar | 122 | 21 | yes | bookmarks | 19-39 | 60377 | 0 |  |
+| EMA | 2021 | Bimzelx | epar | 220 | 9 | yes | bookmarks | 21-29 | 31713 | 0 |  |
+| EMA | 2022 | Tecovirimat SIGA | epar | 128 | 17 | yes | headings | 21-37 | 58937 | 1 |  |
+| EMA | 2022 | Filsuvez | epar | 162 | 12 | yes | headings | 18-29 | 41885 | 0 |  |
+| EMA | 2023 | Litfulo | epar | 191 | 42 | yes | bookmarks | 25-66 | 167173 | 0 |  |
+| EMA | 2023 | Vanflyta | epar | 130 | 15 | yes | bookmarks | 21-35 | 54914 | 0 |  |
+| EMA | 2024 | Eurneffy | epar | 165 | 14 | yes | bookmarks | 16-29 | 36052 | 0 |  |
+| EMA | 2024 | Iqirvo | epar | 157 | 27 | yes | bookmarks | 22-48 | 105407 | 0 |  |
+| EMA | 2025 | Vyjuvek | epar | 107 | 11 | yes | bookmarks | 26-36 | 34186 | 0 |  |
+| EMA | 2025 | Ogsiveo | epar | 167 | 17 | yes | headings | 22-38 | 59522 | 0 |  |
+| EMA | 2026 | Palsonify | epar | 235 | 14 | yes | bookmarks | 27-40 | 53636 | 0 |  |
+| EMA | 2026 | Waskyra | epar | 111 | 13 | yes | bookmarks | 31-43 | 41253 | 0 |  |
+
+Found by format:
+
+| Format | Found | Documents | Share |
+|---|---|---|---|
+| epar | 24 | 24 | 100 % |
+| integrated | 6 | 6 | 100 % |
+| multidisc | 9 | 9 | 100 % |
+| separate | 9 | 9 | 100 % |
+
+Documents by basis:
+
+| Basis | Documents | Share of all |
+|---|---|---|
+| bookmarks | 27 | 56 % |
+| document type | 9 | 19 % |
+| headings | 12 | 25 % |
+
+FDA: median section 26 of 218 pages; sections of integrated/multidisc/epar documents (excluding whole-document cases): median 5 pages.
+
+EMA: median section 14 of 140 pages; sections of integrated/multidisc/epar documents (excluding whole-document cases): median 14 pages.
+
+## Cost: input tokens after layer 1 (PREREG v3 d)
+
+Tokens = characters / 4, over the located section only (whole document when not found). Low-text pages are imputed with the pooled median characters per text page of the same authority. Projection = stratum mean times documents that year; n = 2 per stratum, so the +-2 SE bands are rough and do not cover the choice of one document per drug. EMA documents = drugs with unit 'yes' (sensitivity: yes plus unknown, PREREG v4; upper bound: all B candidates with an EPAR). Local model: tokens only, speed is measured later on the second machine.
+
+| Authority | Documents | Median chars per text page (imputation) | Input tokens | Approx. +-2 SE |
+|---|---|---|---|---|
+| FDA | 541 | 2012 | 14.3 M | 5.3-23.3 M |
+| EMA (unit yes) | 453 | 3394 | 6.4 M | 4.9-7.8 M |
+| EMA (yes + unknown) | 506 | 3394 | 7.1 M | 5.6-8.7 M |
+| EMA (all B with EPAR) | 567 | 3394 | 7.9 M | 6.1-9.6 M |
+
+FDA plus EMA (unit yes): 20.7 M input tokens.
+
+Claude API list prices, USD per million tokens (source: https://platform.claude.com/docs/en/about-claude/pricing and https://claude.com/pricing, fetched 2026-10-23). Haiku 5.5 is priced by prompt length (0.10 up to 100,000 tokens per prompt; 0.50 above). The largest sampled section (low-text pages imputed) is 163494 tokens, above that threshold, so the Haiku figure is a lower bound. Batch processing is 50 % cheaper on the same page.
+
+| Model | Input USD/MTok | FDA USD | EMA USD | Total USD | Total USD, batch |
+|---|---|---|---|---|---|
+| Haiku 5.5 | 0.10 | 1 | 1 | 2 | 1 |
+| Sonnet 5.5 | 2.00 | 29 | 13 | 41 | 21 |
+| Opus 5.5 | 4.00 | 57 | 25 | 83 | 41 |
+
+Input only. Output tokens (the extracted findings and quotes) and the instruction text per request are not included; output costs 0.50/10.00/20.00 USD/MTok for Haiku/Sonnet/Opus respectively, so a few findings per drug add little next to the input.
+
+Claude Code Pro: the pricing page states that Claude Code is included in Pro, shares the plan's usage limits, that limits reset on a rolling five-hour window, and that there is no fixed message count. **No token quota per session is published, so the number of sessions cannot be derived from a source.** Under assumed capacities (assumptions, not facts) the total input of 20.7 M tokens would need:
+
+| Assumed input tokens per five-hour session | Sessions |
+|---|---|
+| 1 M | 21 |
+| 3 M | 7 |
+| 10 M | 2 |
+
+## OCR scope (PREREG v3 c)
+
+Pages below the text-layer threshold (100 characters), measured in the stratified sample and projected to the universe as stratum mean times documents that year (n = 2 per stratum, rough). 'Whole' = all pages of the sampled document; 'Section' = pages inside the layer 1 range. No OCR has been run. EMA documents = drugs with unit 'yes'.
+
+| Authority | Year | Documents | Mean pages | Low share (whole) | Low pages whole (projected) | Low pages in section (projected) |
+|---|---|---|---|---|---|---|
+| FDA | 2015 | 42 | 266 | 58 % | 6447 | 6447 |
+| FDA | 2016 | 22 | 225 | 21 % | 1023 | 814 |
+| FDA | 2017 | 46 | 142 | 24 % | 1564 | 1564 |
+| FDA | 2018 | 59 | 284 | 2 % | 354 | 354 |
+| FDA | 2019 | 46 | 45 | 6 % | 115 | 115 |
+| FDA | 2020 | 52 | 176 | 0 % | 0 | 0 |
+| FDA | 2021 | 49 | 268 | 5 % | 637 | 0 |
+| FDA | 2022 | 36 | 172 | 1 % | 90 | 36 |
+| FDA | 2023 | 55 | 318 | 5 % | 852 | 0 |
+| FDA | 2024 | 50 | 126 | 2 % | 100 | 0 |
+| FDA | 2025 | 46 | 318 | 1 % | 184 | 0 |
+| FDA | 2026 | 38 | 406 | 21 % | 3287 | 589 |
+| EMA | 2015 | 42 | 116 | 0 % | 21 | 0 |
+| EMA | 2016 | 28 | 118 | 2 % | 56 | 0 |
+| EMA | 2017 | 29 | 74 | 1 % | 14 | 0 |
+| EMA | 2018 | 43 | 152 | 3 % | 215 | 86 |
+| EMA | 2019 | 29 | 141 | 1 % | 58 | 0 |
+| EMA | 2020 | 36 | 174 | 2 % | 144 | 0 |
+| EMA | 2021 | 47 | 171 | 3 % | 212 | 0 |
+| EMA | 2022 | 55 | 145 | 2 % | 138 | 28 |
+| EMA | 2023 | 34 | 160 | 2 % | 102 | 0 |
+| EMA | 2024 | 37 | 161 | 2 % | 92 | 0 |
+| EMA | 2025 | 43 | 137 | 3 % | 150 | 0 |
+| EMA | 2026 | 30 | 173 | 0 % | 0 | 0 |
+
+| Authority | Whole: pages | Whole: approx. +-2 SE | Section: pages | Section: approx. +-2 SE |
+|---|---|---|---|---|
+| FDA | 14654 | 2304-27003 | 9919 | -734-20572 |
+| EMA | 1202 | 730-1675 | 114 | -41-268 |
+
+Scope is the OCR load if layer 1 is applied first (Section) or not (Whole). Pages inside the section of a document whose section was not found count as the whole document.
+
 ## Open for decision
 
-1. **EMA definition B over-counts by about 16 % against EMA's own counts** (+69 on 431, 2015-2025, counted by opinion year; 41 B rows have no opinion date, so the gap is if anything larger). The causes are not examined row by row (a check of identical new-substance sets found few duplicates). Proposal: in the full run, extract the EPAR's own statement of whether the medicine has a new active substance (a metadata field, not an outcome) and use it as the final unit definition. B then becomes a candidate list only. The 2021 EMA figure (54) still needs a manual check.
+1. **EMA definition B over-counts by about 16 % against EMA's own counts** (+69 on 431, 2015-2025, counted by opinion year). Resolved by PREREG v3 (a): the unit is the EPAR's own statement of new active substance status; B is a candidate list only. See the section 'EMA unit' for the effect and the unknown share per year. The 2021 EMA figure (54) still needs a manual check.
 
 2. **Scope: total pages in the universe.** Estimated from the sample mean pages per year and authority times the number of documents that year (FDA: drugs with a non-clinical document; EMA: drugs with a public EPAR). One document per drug only; n = 2 per stratum, so the figures are rough.
 
 | Authority | Documents | Mean pages per document | Estimated pages | Approx. +-2 SE range |
 |---|---|---|---|---|
 | FDA | 541 | 229 | 124000 | 96000-152000 |
-| EMA | 557 | 144 | 80000 | 71000-90000 |
+| EMA | 567 | 144 | 82000 | 73000-91000 |
 
-About 204,000 pages in total for one non-clinical document per drug. Reading that volume with a model is large, so the coarse pre-filter allowed by extraction rule 4 (only if the pilot shows it loses no A findings) is needed.
+About 206,000 pages in total for one non-clinical document per drug. Reading that volume with a model is large, so the coarse pre-filter allowed by extraction rule 4 (only if the pilot shows it loses no A findings) is needed.
 
-3. **FDA 2015-2017 has a low text layer** (sample: 799 of 1267 pages, 63 %; per year 0.42, 0.79, 0.76; 110 drugs with a non-clinical document in those years). A decision on OCR is needed: OCR those documents, accept lower recall there, or exclude the years. Text quality after OCR is measured in the pilot.
+3. **OCR.** Decided in PREREG v3 (c): every page below the threshold is OCR'd, all years and both agencies. The scope is in the section 'OCR scope'. OCR software is not installed yet and text quality after OCR is measured in the pilot.
 
-4. **Power for question 2** (one-sided z test, alpha 0.05, power 80 %, normal approximation; counts only). Before = approved 2015-2022, after = approved 2024-2026 (2023 excluded). Counts are the universe (EMA: definition B; FDA: drugs on the novel list), not the analysable subset. With a low baseline and few expected events the approximation is rough.
+4. **Power for question 2** (one-sided z test, alpha 0.05, power 80 %, normal approximation; counts only). Before = approved 2015-2022, after = approved 2024-2026 (2023 excluded). Counts are the universe (EMA: unit yes by approval year, PREREG v4; FDA: drugs on the novel list), not the analysable subset. With a low baseline and few expected events the approximation is rough.
 
 | Group | n before | n after | Assumed share before | Smallest detectable share after | Difference | Power for a doubling |
 |---|---|---|---|---|---|---|
-| EMA alone | 392 | 134 | 2 % | 6.8 % | +4.8 points | 38 % |
-| EMA alone | 392 | 134 | 5 % | 11.6 % | +6.6 points | 64 % |
-| EMA alone | 392 | 134 | 10 % | 18.5 % | +8.5 points | 89 % |
+| EMA alone | 309 | 110 | 2 % | 7.6 % | +5.6 points | 34 % |
+| EMA alone | 309 | 110 | 5 % | 12.5 % | +7.5 points | 57 % |
+| EMA alone | 309 | 110 | 10 % | 19.5 % | +9.5 points | 83 % |
 | FDA alone | 360 | 143 | 2 % | 6.8 % | +4.8 points | 38 % |
 | FDA alone | 360 | 143 | 5 % | 11.6 % | +6.6 points | 64 % |
 | FDA alone | 360 | 143 | 10 % | 18.4 % | +8.4 points | 89 % |
-| Combined | 752 | 277 | 2 % | 5.1 % | +3.1 points | 56 % |
-| Combined | 752 | 277 | 5 % | 9.4 % | +4.4 points | 87 % |
-| Combined | 752 | 277 | 10 % | 15.8 % | +5.8 points | 99 % |
+| Combined | 669 | 253 | 2 % | 5.3 % | +3.3 points | 53 % |
+| Combined | 669 | 253 | 5 % | 9.7 % | +4.7 points | 84 % |
+| Combined | 669 | 253 | 10 % | 16.1 % | +6.1 points | 98 % |
 
 PREREG: if power is below 50 % for a doubling of the share, question 2 is reported as information only. The last column is that power.
 
-5. **Still missing from Phase 0:** time and model usage per document on 3 documents outside the sample and the pilot, and the choice of model.
+5. **Still missing from Phase 0:** model speed and quality (measured in the pilot and, for a local model, on the second machine) and the choice of model. Token counts and API prices are in the section 'Cost'.
