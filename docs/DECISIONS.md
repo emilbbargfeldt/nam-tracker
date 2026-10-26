@@ -444,3 +444,9 @@ for a2 was proposed by Claude chat, a2 tests wording only. keywords.py is not
 changed on the basis of the spike-ins before the result is reported. Running the pipeline on
 a separate document directory is a separate change, not yet made. No pilot
 extraction output has been viewed or counted.
+
+## 2026-10-26: Spike-in coding rule (reviews)
+
+Spike-in coding: reviews or general overviews of a technology without a
+concrete in vitro experiment are coded 0 (background mention). Rule made
+explicit after row 26; rows 1-25 re-checked by Emil against it, no changes.
