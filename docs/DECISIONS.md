@@ -449,4 +449,5 @@ extraction output has been viewed or counted.
 
 Spike-in coding: reviews or general overviews of a technology without a
 concrete in vitro experiment are coded 0 (background mention). Rule made
-explicit after row 26; rows 1-25 re-checked by Emil against it, no changes.
+explicit after row 26; rows 1-25 re-checked by Emil against it; changed rows
+are marked 'revised: review rule'.
