@@ -431,7 +431,13 @@ PREREG version 7 measures it on two separate sets: (a1) the first 10 known
 positives Emil finds with an external search engine (queries and date
 committed before extraction), coded by Emil, and (a2) spike-ins from 20 PubMed
 abstracts drawn at random (seed committed; 4 per MeSH term; Emil codes each,
-only A = 1 used), inserted in test copies of random non-pilot documents. The requirement of >= 90 % applies to each set;
+only A = 1 used; if fewer than 20 are A = 1, batches of 5 are drawn
+and coded with the same seed until 20 are A = 1 or 60 are drawn), inserted in
+test copies of random non-pilot documents. Sensitivity on a2 is measured at
+the keyword step and as an A finding whose verified quote overlaps the
+inserted abstract text on the spiked page; drug relevance is not assessed.
+Spike pages are chosen only among layer 1 pages that are not A candidates
+before the insertion, so a hit cannot be due to existing text. The requirement of >= 90 % applies to each set;
 specificity and unverified quotes are measured on the 15 pilot drugs.
 Limitations: a1 is partly circular (term-based search), the MeSH term choice
 for a2 was proposed by Claude chat, a2 tests wording only. keywords.py is not
