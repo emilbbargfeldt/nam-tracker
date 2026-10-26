@@ -311,3 +311,39 @@ passes. OCR of the layer 1 pages below 100 characters of the 30 pilot drugs:
 0). The 7 were not read; they may be blank or nearly blank pages. Emil's PDFs
 are page images and do not change with OCR. Pilot extraction requires the flag
 `--blind`; without it the tool stops.
+
+## 2026-10-26: Layer 2 keyword filter introduced (PREREG version 5)
+
+The pilot extraction (full model reading of layer 1 for the pilot drugs,
+about 5 % of the universe's layer 1 tokens) used one week of the plan's
+usage quota, which breaks the Phase 0 cost criterion. Layer 2 is a local
+keyword search (`studies/nam/extract/keywords.py`, codes A, B, C, D, S) that
+selects candidate pages; the model reads only those. PREREG version 5 records
+the design and the sensitivity requirement for A.
+
+The first draft of the list used "[- ]" as separator. Before this commit it was
+replaced by SEP = "[-\u2010\u2011\u2013\s]?" (optional), because the
+quotecheck normalization joins words split by a hyphen at a line end
+("organ-<newline>on-a-chip" becomes "organon-a-chip") and PDF text also splits
+words at line ends without a hyphen. Gaps in A were closed at the same time
+(3D, iPS, iPS-CMs, cardiomyocyte, CiPA, air-liquid interface, ALI, ex vivo
+human, human explants, "<word> chip"). B, C, D and S changed only in the
+separator. Tests: known answers per code, per-pattern tests for A, A in 11
+spelling forms, two mutants (A list empty; rigid separator "[- ]" checked per
+pattern), pin tests on `core.quotecheck._normalize`, and an ASCII check of the
+file.
+
+Unicode hyphens and dashes (U+2010, U+2011, U+2013) and the soft hyphen (U+00AD)
+are already handled by the quotecheck normalization, which runs before
+matching. The Unicode characters in SEP are therefore defence in depth, and a
+rigid separator cannot be caught by those forms (documented in a test). U+00AD
+was checked and is removed by the normalization, so it was not added to SEP.
+
+Review before commit found quadratic backtracking in \w+SEPchips?\b (20,000
+chars: 8.2 s); quantifier bounded to \w{1,40}. Same coverage for real words.
+A timing test runs all patterns on 20,000 characters of "a", "a-", "a " and
+"chip" repeated (limit 0.5 s).
+
+No outcome has been seen. The pilot extraction output in `$NAM_DATA/extract/`
+has not been viewed, counted or evaluated; it stays blinded until Emil's 15
+blind codings are committed.
