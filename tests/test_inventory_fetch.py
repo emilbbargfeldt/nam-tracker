@@ -27,7 +27,7 @@ def make(tmp_path, bodies, cap=10 ** 9):
         return bodies[url]
 
     f = Fetcher(root=tmp_path, opener=opener, clock=clock.time,
-                sleep=clock.sleep, cap=cap)
+                sleep=clock.sleep, cap=cap, min_free=0)
     return f, calls, clock
 
 
@@ -77,7 +77,8 @@ def test_failed_request_still_counts_for_rate_limit(tmp_path):
             raise OSError("boom")
         return b"ok"
 
-    f = Fetcher(root=tmp_path, opener=opener, clock=clock.time, sleep=clock.sleep)
+    f = Fetcher(root=tmp_path, opener=opener, clock=clock.time,
+                sleep=clock.sleep, min_free=0)
     with pytest.raises(OSError):
         f.get("u1")
     t0 = clock.now
@@ -85,9 +86,37 @@ def test_failed_request_still_counts_for_rate_limit(tmp_path):
     assert clock.now - t0 >= 1.0 - 1e-9
 
 
-def test_cap_constant_is_five_gib():
+def test_cap_constant_is_fifteen_gib():
     from studies.nam.inventory import fetch
-    assert fetch.MAX_DATA_BYTES == 5 * 1024 ** 3
+    assert fetch.MAX_DATA_BYTES == 15 * 1024 ** 3
+
+
+def test_free_space_floor_constant_is_ten_gib():
+    from studies.nam.inventory import fetch
+    assert fetch.MIN_FREE_BYTES == 10 * 1024 ** 3
+
+
+def test_low_free_space_stops_fetching(tmp_path):
+    calls = []
+
+    def opener(url):
+        calls.append(url)
+        return b"x"
+
+    f = Fetcher(root=tmp_path, opener=opener, min_free=100,
+                free_space=lambda p: 99)
+    with pytest.raises(DataCapExceeded):
+        f.get("u1")
+    assert calls == []
+
+
+def test_enough_free_space_fetches_and_cached_url_is_served(tmp_path):
+    free = {"n": 100}
+    f = Fetcher(root=tmp_path, opener=lambda u: b"x", min_free=100,
+                free_space=lambda p: free["n"])
+    f.get("u1")
+    free["n"] = 0
+    assert f.get("u1").read_bytes() == b"x"
 
 
 def test_url_with_space_is_quoted_not_rejected(monkeypatch):

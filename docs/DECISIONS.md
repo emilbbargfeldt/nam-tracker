@@ -398,3 +398,14 @@ bypasses the guard (convention); any non-empty VERDICT.md in HEAD unlocks it.
 
 No outcome has been seen; only aggregate counts across all codes were viewed.
 
+
+## 2026-10-26: Fetcher limits; blind coding doubt rule
+
+The data cap of the fetcher is raised from 5 GiB to 15 GiB (the 500 FDA PDFs
+missing from the cache are estimated at about 7 GB), and the fetcher now also
+stops when free space on the filesystem of the data directory is below 10 GiB.
+Both limits are tested with artificially low values.
+
+Blind coding doubt rule: code by best judgement (0/1); write UNSURE: <reason>
+in notes. The pilot reports A sensitivity with and without UNSURE rows; the
+requirement applies to all rows.

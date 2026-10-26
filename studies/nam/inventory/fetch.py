@@ -1,11 +1,13 @@
 """Polite, cached, read-only HTTP GET.
 
 At most one request per second, every URL fetched once (cache keyed by the
-URL hash), and a hard stop when the data directory passes the size cap.
+URL hash), and a hard stop when the data directory passes the size cap or the
+free space on its filesystem falls below the floor.
 """
 import gzip
 import hashlib
 import os
+import shutil
 import time
 import urllib.parse
 import urllib.request
@@ -13,7 +15,8 @@ from pathlib import Path
 
 USER_AGENT = "nam-tracker-phase0/1.0 (academic inventory; read-only)"
 MIN_INTERVAL_S = 1.0
-MAX_DATA_BYTES = 5 * 1024 ** 3
+MAX_DATA_BYTES = 15 * 1024 ** 3
+MIN_FREE_BYTES = 10 * 1024 ** 3
 TIMEOUT_S = 60
 MAX_BODY_BYTES = 512 * 1024 ** 2
 CHUNK = 1024 * 1024
@@ -41,12 +44,15 @@ def dir_size(path):
 class Fetcher:
     def __init__(self, root=None, min_interval=MIN_INTERVAL_S,
                  cap=MAX_DATA_BYTES, opener=None, clock=time.monotonic,
-                 sleep=time.sleep):
+                 sleep=time.sleep, min_free=MIN_FREE_BYTES,
+                 free_space=None):
         self.root = Path(root) if root is not None else data_dir()
         self.cache = self.root / "cache"
         self.cache.mkdir(parents=True, exist_ok=True)
         self.min_interval = min_interval
         self.cap = cap
+        self.min_free = min_free
+        self._free_space = free_space or (lambda p: shutil.disk_usage(p).free)
         self._opener = opener or self._urlopen
         self._clock = clock
         self._sleep = sleep
@@ -78,6 +84,8 @@ class Fetcher:
             return path
         if dir_size(self.root) >= self.cap:
             raise DataCapExceeded("data directory reached the size cap")
+        if self._free_space(self.root) < self.min_free:
+            raise DataCapExceeded("free disk space below the floor")
         if self._last is not None:
             wait = self.min_interval - (self._clock() - self._last)
             if wait > 0:
