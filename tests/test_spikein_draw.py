@@ -189,8 +189,134 @@ def test_main_writes_outside_repo_and_draws_twenty(tmp_path, monkeypatch, capsys
         return fetcher(tmp_path / "c", FakePubMed())
 
     monkeypatch.setattr(sd, "Fetcher", make)
-    assert sd.main() == 0
+    assert sd.main([]) == 0
     rows = [json.loads(l) for l in (tmp_path / "spikeins" / "abstracts.jsonl").open()]
     assert len(rows) == 20 and len({r["pmid"] for r in rows}) == 20
     assert (tmp_path / "spikeins" / "draw.json").exists()
     assert "drew 20 abstracts" in capsys.readouterr().out
+
+
+def test_first_twenty_are_unchanged_by_batches(tmp_path):
+    base0, _, _ = sd.draw_all(fetcher(tmp_path / "a", FakePubMed()))
+    base3, batches, _ = sd.draw_all(fetcher(tmp_path / "b", FakePubMed()), batches=3)
+    assert [r["pmid"] for r in base0] == [r["pmid"] for r in base3]
+    assert len(base0) == 20 and len(batches) == 3
+    assert all(len(b) == 5 for b in batches)
+
+
+def test_batch_has_one_row_per_term_in_fixed_rotation(tmp_path):
+    _, batches, _ = sd.draw_all(fetcher(tmp_path, FakePubMed()), batches=2)
+    for b in batches:
+        assert [r["mesh"] for r in b] == sd.TERMS
+
+
+def test_batches_are_distinct_from_base_and_each_other(tmp_path):
+    base, batches, _ = sd.draw_all(fetcher(tmp_path, FakePubMed()), batches=2)
+    pmids = [r["pmid"] for r in base] + [r["pmid"] for b in batches for r in b]
+    assert len(pmids) == 30 and len(set(pmids)) == 30
+
+
+def test_batch_n_is_the_same_whether_drawn_with_n_or_more(tmp_path):
+    _, b2, _ = sd.draw_all(fetcher(tmp_path / "a", FakePubMed()), batches=2)
+    _, b3, _ = sd.draw_all(fetcher(tmp_path / "b", FakePubMed()), batches=3)
+    assert [r["pmid"] for r in b2[1]] == [r["pmid"] for r in b3[1]]
+
+
+def test_main_batch_writes_only_batch_files(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv("NAM_DATA", str(tmp_path))
+    monkeypatch.setattr(sd, "Fetcher",
+                        lambda **kw: fetcher(tmp_path / "c", FakePubMed()))
+    assert sd.main([]) == 0
+    base = (tmp_path / "spikeins" / "abstracts.jsonl").read_text()
+    assert sd.main(["--batch", "1"]) == 0
+    assert sd.main(["--batch", "1"]) == 2
+    assert sd.main([]) == 2
+    d = tmp_path / "spikeins"
+    assert (d / "abstracts.jsonl").read_text() == base
+    rows = [json.loads(l) for l in (d / "abstracts_batch1.jsonl").open()]
+    assert len(rows) == 5
+    text = (d / "abstracts_batch1_for_coding.txt").read_text()
+    assert text.count("PMID ") == 5 and "mesh" not in text
+    assert "drew batch 1: 5 abstracts" in capsys.readouterr().out
+
+
+def test_main_batch_refuses_if_base_set_differs(tmp_path, monkeypatch):
+    monkeypatch.setenv("NAM_DATA", str(tmp_path))
+    monkeypatch.setattr(sd, "Fetcher",
+                        lambda **kw: fetcher(tmp_path / "c", FakePubMed()))
+    (tmp_path / "spikeins").mkdir()
+    assert sd.main(["--batch", "1"]) == 2
+    (tmp_path / "spikeins" / "abstracts.jsonl").write_text('{"pmid": "1"}\n')
+    with pytest.raises(RuntimeError):
+        sd.main(["--batch", "1"])
+
+
+def test_main_batch_refuses_if_counts_differ(tmp_path, monkeypatch):
+    monkeypatch.setenv("NAM_DATA", str(tmp_path))
+    monkeypatch.setattr(sd, "Fetcher",
+                        lambda **kw: fetcher(tmp_path / "c", FakePubMed()))
+    assert sd.main([]) == 0
+    path = tmp_path / "spikeins" / "draw.json"
+    record = json.loads(path.read_text())
+    record["terms"][0]["counts_by_year"]["2015"] = 4
+    path.write_text(json.dumps(record))
+    with pytest.raises(RuntimeError):
+        sd.main(["--batch", "1"])
+
+
+def test_batch_8_is_possible_and_exhaustion_stops_a_batch(tmp_path):
+    _, batches, _ = sd.draw_all(fetcher(tmp_path / "a", FakePubMed()), batches=8)
+    assert len(batches) == 8
+    with pytest.raises(RuntimeError):
+        sd.draw_all(fetcher(tmp_path / "b", FakePubMed()), batches=12)
+
+
+class Overlap(FakePubMed):
+    """Every term sees the same PMIDs, so cross-term duplicates are frequent."""
+
+    def __call__(self, url):
+        if "esearch" in url and "retmax=1" in url:
+            q = sd.urllib.parse.parse_qs(sd.urllib.parse.urlparse(url).query)
+            year = int(q["term"][0].split(" AND ")[-1].split("[")[0])
+            off = int(q["retstart"][0])
+            return json.dumps({"esearchresult": {"count": "5",
+                              "idlist": ["%d%03d" % (year, off)]}}).encode()
+        return super().__call__(url)
+
+
+def reference_base(fetcher_, terms, seed):
+    """The base draw as originally written (one taken set, term by term)."""
+    taken, out = set(), []
+    for mesh in terms:
+        counts = sd.year_counts(fetcher_, mesh)
+        total = sum(counts.values())
+        rng = sd.random.Random("%d:%s" % (seed, "|".join(mesh)))
+        seen, got = set(), 0
+        while got < sd.PER_TERM:
+            index = rng.randrange(total)
+            if index in seen:
+                continue
+            seen.add(index)
+            year, offset = sd.locate(counts, index)
+            ids = sd.esearch(fetcher_, sd.query(mesh, year), retstart=offset,
+                             retmax=1)["idlist"]
+            if ids[0] in taken:
+                continue
+            taken.add(ids[0])
+            out.append(ids[0])
+            got += 1
+    return out
+
+
+def test_base_draw_equals_original_algorithm_with_cross_term_duplicates(tmp_path):
+    base, _, _ = sd.draw_all(fetcher(tmp_path / "a", Overlap()), batches=2)
+    ref = reference_base(fetcher(tmp_path / "b", Overlap()), sd.TERMS, sd.SEED)
+    assert [r["pmid"] for r in base] == ref
+    assert len(set(ref)) == 20
+
+
+@pytest.mark.parametrize("args", [["--batch"], ["--batch", "0"], ["--batch", "9"],
+                                  ["--batch", "x"], ["--other", "1"]])
+def test_main_rejects_bad_arguments(args, capsys):
+    assert sd.main(args) == 2
+    assert "nothing run" in capsys.readouterr().out
