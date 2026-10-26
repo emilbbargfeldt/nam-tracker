@@ -500,3 +500,19 @@ between words); hyphenated line breaks, ligatures and hyphen/space variants are
 not matched, which only narrows the universe the draw is taken from. The hit
 index is rebuilt on every run and stored nowhere; a later batch is refused if
 the search result differs from that of the earlier batches.
+
+## 2026-10-26: Pilot extraction of the old design archived unopened
+
+The pilot extraction made with the full layer 1 design (before PREREG v5 and
+v6) is archived unopened as $NAM_DATA/extract_v5_fulllayer1 (moved from
+$NAM_DATA/extract). 112 files. Run 2026-10-23 to 2026-10-26, prompt hash
+f15802f1f9e6 (the same as the current prompt), model claude-sonnet-5-5 (Claude
+Code 2.1.309 and 2.1.310), design: whole layer 1 in chunks of at most 200,000
+characters. A sha256 list of every file is in
+$NAM_DATA/extract_v5_fulllayer1.sha256 (sha256 of the list file:
+20b5d683e4a4b6fed479d1c450080eb5fa73c3c201fb29204453343f35a97df1); the list and
+the folder are write-protected and were verified against the list after the
+move. The content has not been opened, shown, summarised or counted. It is kept
+as the v5(c) reference: candidate pages must contain every A finding of the full
+layer 1 model extraction already run. A new pilot extraction (v6 windows) goes
+to a new $NAM_DATA/extract, so the old chunks cannot be overwritten.
