@@ -423,3 +423,18 @@ A: organoids incl. PDO; spheroids/3D cultures; organ-on-chip/MPS; iPSC-derived
 cells incl. cardiomyocytes; reconstructed human tissue incl. 3D skin
 micronucleus and 3D skin phototoxicity. Redacted sections coded on visible text
 only. Emil coded all 15 himself.
+
+## 2026-10-26: PREREG version 7 (sensitivity measurement for category A)
+
+All 15 pilot codings are A = 0, so A sensitivity cannot be measured on them.
+PREREG version 7 measures it on two separate sets: (a1) the first 10 known
+positives Emil finds with an external search engine (queries and date
+committed before extraction), coded by Emil, and (a2) exactly 20 spike-in
+sentences written by Emil and inserted in test copies of random non-pilot
+documents (seed committed). The requirement of >= 90 % applies to each set;
+specificity and unverified quotes are measured on the 15 pilot drugs.
+Limitations: a1 is partly circular (term-based search), Emil has seen
+keywords.py earlier, a2 tests wording only. keywords.py is not changed on the
+basis of the spike-ins before the result is reported. Running the pipeline on
+a separate document directory is a separate change, not yet made. No pilot
+extraction output has been viewed or counted.
