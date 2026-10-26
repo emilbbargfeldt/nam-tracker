@@ -409,3 +409,17 @@ Both limits are tested with artificially low values.
 Blind coding doubt rule: code by best judgement (0/1); write UNSURE: <reason>
 in notes. The pilot reports A sensitivity with and without UNSURE rows; the
 requirement applies to all rows.
+
+## 2026-10-26: Codebook clarifications before unblinding
+
+Claude chat saw some layer 1 text from pilot documents while Emil asked about
+model types; it gave general rules only, no codes. Not A: in vivo animals incl.
+knockout/transgenic/xenograft; unspecified 'in vitro'/'cells'/'tissues';
+microbial culture systems (chemostat, hollow-fiber, biofilm); standard
+genotoxicity battery (Ames, 2D micronucleus/chromosome aberration, in vivo
+micronucleus); 3T3 NRU phototoxicity; recombinant enzymes; engineered 2D cell
+lines; ion channel panels in transfected cells; isolated animal cardiomyocytes.
+A: organoids incl. PDO; spheroids/3D cultures; organ-on-chip/MPS; iPSC-derived
+cells incl. cardiomyocytes; reconstructed human tissue incl. 3D skin
+micronucleus and 3D skin phototoxicity. Redacted sections coded on visible text
+only. Emil coded all 15 himself.
