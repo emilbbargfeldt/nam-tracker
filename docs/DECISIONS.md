@@ -451,3 +451,17 @@ Spike-in coding: reviews or general overviews of a technology without a
 concrete in vitro experiment are coded 0 (background mention). Rule made
 explicit after row 26; rows 1-25 re-checked by Emil against it; changed rows
 are marked 'revised: review rule'.
+
+Spike-in coding rules made explicit during coding: (1) reviews or general
+overviews of a technology without a concrete in vitro experiment are coded 0
+(background mention); (2) reports that only generate and characterize a model
+or product (e.g. iPSC lines, implants, grafts, cell sources for therapy)
+without using it as an in vitro test system are coded 0; (3) agents used only
+to differentiate or build a model are not a test; (4) background statements
+about earlier in vivo work do not affect the code. Rows coded before a rule
+was made explicit were re-checked by Emil; changed rows are marked 'revised:
+<rule>'. The re-check resulted in no changes.
+
+Spike-in set outcome: 4 batches (40 abstracts) were drawn and coded under the
+fill rule; 21 have A = 1 and all 21 are used, from all drawn batches, with no
+exclusions.
