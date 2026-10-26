@@ -140,3 +140,88 @@ def test_url_with_space_is_quoted_not_rejected(monkeypatch):
     from studies.nam.inventory import fetch
     fetch.Fetcher._urlopen("http://h/a b,c.html")
     assert " " not in seen["url"]
+
+
+def _id(u):
+    return u["name"]
+
+
+def test_missing_items_selects_only_no_pdf_rows(tmp_path):
+    jsonl = tmp_path / "m.jsonl"
+    jsonl.write_text('{"doc": "b", "reason": "no pdf in cache"}\n'
+                     '{"doc": "a", "reason": "ocr missing", "pages": [1]}\n'
+                     '{"doc": "c", "reason": "no pdf in cache"}\n')
+    units = [{"name": n, "url": n} for n in ("c", "a", "b", "d")]
+    from studies.nam.inventory.fetch import missing_items
+    assert [u["name"] for u in missing_items(jsonl, units, _id)] == ["b", "c"]
+
+
+def test_fetch_items_counts_status_and_stops_on_limit(tmp_path):
+    from studies.nam.inventory.fetch import fetch_items
+    f, _, _ = make(tmp_path, {"u%d" % i: b"x" * 10 for i in range(5)})
+    items = [{"name": "n%d" % i, "url": "u%d" % i} for i in range(5)]
+    lines = []
+    ok, failed, size = fetch_items(f, items, _id, get=lambda fe, u: fe.get(u),
+                                   every=2, out=lines.append)
+    assert (ok, failed, size) == (5, 0, 50)
+    assert lines == ["2/5 fetched 2 failed 0 MB 0", "4/5 fetched 4 failed 0 MB 0"]
+    low = Fetcher(root=tmp_path / "low", opener=lambda u: b"x", min_free=100,
+                  free_space=lambda p: 0)
+    lines = []
+    ok, failed, size = fetch_items(low, items, _id, get=lambda fe, u: fe.get(u),
+                                   out=lines.append)
+    assert (ok, failed) == (0, 1)
+    assert lines == ["fail n0: DataCapExceeded", "stopped on limit"]
+
+
+def test_main_rejects_other_arguments(capsys):
+    from studies.nam.inventory.fetch import main
+    assert main(["--other"]) == 2
+    assert "nothing run" in capsys.readouterr().out
+
+
+def test_failed_check_changes_no_state(tmp_path):
+    calls = []
+    f = Fetcher(root=tmp_path, opener=lambda u: calls.append(u) or b"x",
+                min_free=100, free_space=lambda p: 0)
+    with pytest.raises(DataCapExceeded):
+        f.get("u1")
+    assert (calls, f.requests, f._last) == ([], 0, None)
+
+
+def test_cached_url_served_when_cap_exceeded_and_space_low(tmp_path):
+    f, _, _ = make(tmp_path, {"u1": b"x" * 100})
+    f.get("u1")
+    g = Fetcher(root=tmp_path, opener=lambda u: b"y", cap=0, min_free=100,
+                free_space=lambda p: 0)
+    assert g.get("u1").read_bytes() == b"x" * 100
+
+
+def test_retry_wrapper_does_not_retry_a_limit(tmp_path):
+    from studies.nam.inventory.fetch_tocs import get_with_retry
+    calls = []
+    f = Fetcher(root=tmp_path, opener=lambda u: calls.append(u) or b"x",
+                min_free=100, free_space=lambda p: 0)
+    with pytest.raises(DataCapExceeded):
+        get_with_retry(f, "u1")
+    assert calls == []
+
+
+def test_default_free_space_function_is_used(tmp_path):
+    f = Fetcher(root=tmp_path, opener=lambda u: b"x", min_free=1 << 62)
+    with pytest.raises(DataCapExceeded):
+        f.get("u1")
+
+
+def test_failed_write_leaves_no_part_file(tmp_path, monkeypatch):
+    f, _, _ = make(tmp_path, {"u1": b"x"})
+    real = type(f.path_for("u1")).write_bytes
+
+    def boom(self, data):
+        real(self, data[:0])
+        raise OSError("disk full")
+
+    monkeypatch.setattr(type(f.path_for("u1")), "write_bytes", boom)
+    with pytest.raises(OSError):
+        f.get("u1")
+    assert list(f.cache.glob("*")) == []

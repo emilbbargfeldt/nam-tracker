@@ -3,11 +3,16 @@
 At most one request per second, every URL fetched once (cache keyed by the
 URL hash), and a hard stop when the data directory passes the size cap or the
 free space on its filesystem falls below the floor.
+
+Usage: NAM_DATA=... python -I -m studies.nam.inventory.fetch --from-missing <jsonl>
+fetches, serially, the documents listed with reason "no pdf in cache".
 """
 import gzip
 import hashlib
 import os
+import json
 import shutil
+import sys
 import time
 import urllib.parse
 import urllib.request
@@ -94,7 +99,11 @@ class Fetcher:
         self.requests += 1
         body = self._opener(url)
         tmp = path.with_suffix(".part")
-        tmp.write_bytes(body)
+        try:
+            tmp.write_bytes(body)
+        except BaseException:
+            tmp.unlink(missing_ok=True)
+            raise
         tmp.replace(path)
         return path
 
@@ -103,3 +112,61 @@ class Fetcher:
         if body[:2] == b"\x1f\x8b":
             body = gzip.decompress(body)
         return body
+
+
+def missing_items(jsonl, units, doc_id_of):
+    """Units whose doc id is listed with reason "no pdf in cache", sorted by id."""
+    ids = set()
+    with open(jsonl) as fh:
+        for line in fh:
+            row = json.loads(line)
+            if row.get("reason") == "no pdf in cache":
+                ids.add(row["doc"])
+    return sorted((u for u in units if doc_id_of(u) in ids), key=doc_id_of)
+
+
+def fetch_items(fetcher, items, doc_id_of, get=None, every=100, out=print):
+    """Fetch items one at a time. Returns (fetched, failed, bytes).
+
+    Prints a short status every `every` items and stops at once when a limit
+    (DataCapExceeded) is hit.
+    """
+    if get is None:
+        from studies.nam.inventory.fetch_tocs import get_with_retry
+        get = get_with_retry
+    ok = failed = size = 0
+    for n, item in enumerate(items, 1):
+        try:
+            size += get(fetcher, item["url"]).stat().st_size
+            ok += 1
+        except Exception as exc:
+            failed += 1
+            out("fail %s: %s" % (doc_id_of(item), type(exc).__name__))
+            if isinstance(exc, DataCapExceeded):
+                out("stopped on limit")
+                break
+        if n % every == 0:
+            out("%d/%d fetched %d failed %d MB %.0f"
+                % (n, len(items), ok, failed, size / 1e6))
+    return ok, failed, size
+
+
+def main(argv=None):
+    argv = sys.argv[1:] if argv is None else argv
+    if len(argv) != 2 or argv[0] != "--from-missing":
+        print("usage: fetch --from-missing <jsonl> (nothing run)")
+        return 2
+    from studies.nam.extract.candidates import doc_id_of
+    from studies.nam.pilot import draw
+    f = Fetcher()
+    units, _ = draw.universe(f)
+    items = missing_items(argv[1], units.values(), doc_id_of)
+    start = time.monotonic()
+    ok, failed, size = fetch_items(f, items, doc_id_of)
+    print("DONE fetched %d failed %d MB %.0f time %.0f min"
+          % (ok, failed, size / 1e6, (time.monotonic() - start) / 60))
+    return 1 if failed else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
