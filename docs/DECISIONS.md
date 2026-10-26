@@ -480,3 +480,23 @@ totals only (totals.json), not per-spike results, and refuses if keywords.py or
 the extraction prompt changed since prepare. Prepare refuses with uncommitted
 changes under studies, tests or docs, and the cache is read only (nothing is
 fetched). A window is sent as one prompt without chunking.
+
+## 2026-10-26: PREREG version 8 (a1 by local term search; 50 % rule)
+
+Known positives (a1) are no longer found with an external search engine: a
+Google search gave few and noisy hits, while a local full-text search of the
+layer 1 text is reproducible and runs on the study universe itself. Emil's
+terms are in a committed file (a1_terms.txt); keywords.py is not used. One
+draw per document (a document uniformly among those with a hit, then one hit
+page uniformly), unit = the drawn page, and the script shows no counts. For
+a2, the model step counts as found only if at least 50 % of the quote lies
+inside the inserted abstract text, because a one-character overlap or a
+generic phrase in the inserted text could otherwise count as found. Fill
+rule for a1: 10 more documents per batch while fewer than 10 are A = 1, at
+most 50 draws; a batch is only drawn if the codes of the earlier batches are
+committed.
+The a1 search matches the terms literally (case-insensitive, any whitespace
+between words); hyphenated line breaks, ligatures and hyphen/space variants are
+not matched, which only narrows the universe the draw is taken from. The hit
+index is rebuilt on every run and stored nowhere; a later batch is refused if
+the search result differs from that of the earlier batches.

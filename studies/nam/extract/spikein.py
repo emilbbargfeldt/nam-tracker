@@ -329,13 +329,40 @@ def measure_all(out_dir, caller, say=print, keywords_path=KEYWORDS):
     return k, m, n
 
 
+def real_loader(f):
+    """({doc id: unit} without the pilot drugs, load(doc id)). load gives
+    (layer 1 pages, layer 1 page numbers) from the local cache (PDF text layer
+    and cached OCR text) or None. Nothing is fetched or written."""
+    from studies.nam.inventory import section
+    from studies.nam.extract import ocr
+    from studies.nam.pilot import draw
+    units, _ = draw.universe(f)
+    keys = candidates.pilot_keys()
+    items = {candidates.doc_id_of(u): u for k, u in units.items() if k not in keys}
+
+    def load(doc_id):
+        item = items[doc_id]
+        path = f.path_for(item["url"])
+        if not path.exists():
+            return None
+        loc, pages = section.locate_pdf(path, item["format"])
+        numbers = [p for lo, hi in loc["ranges"] for p in range(lo, hi + 1)]
+        if not pages or not numbers:
+            return None
+        low = section.low_pages(loc, pages)
+        pages, _ = candidates.apply_cached_ocr(
+            pages, low, ocr.cached_pages(path, low, f.root / "ocr"))
+        return pages, numbers
+
+    return items, load
+
+
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
     if len(argv) != 1 or argv[0] not in ("prepare", "run"):
         print("usage: spikein prepare|run (nothing run)")
         return 2
     from studies.nam.inventory.fetch import Fetcher
-    from studies.nam.pilot import draw
     f = read_only_fetcher(Fetcher)()
     out_dir = f.root / "spiked"
     if argv[0] == "run":
@@ -356,27 +383,8 @@ def main(argv=None):
     if dirty:
         print("uncommitted changes under studies, tests or docs (nothing run)")
         return 2
-    units, _ = draw.universe(f)
-    keys = candidates.pilot_keys()
-    items = {candidates.doc_id_of(u): u for k, u in units.items() if k not in keys}
+    items, load = real_loader(f)
     abstracts = load_abstracts(f.root / "spikeins", a1_pmids())
-    from studies.nam.inventory import section
-    from studies.nam.extract import ocr
-
-    def load(doc_id):
-        item = items[doc_id]
-        path = f.path_for(item["url"])
-        if not path.exists():
-            return None
-        loc, pages = section.locate_pdf(path, item["format"])
-        numbers = [p for lo, hi in loc["ranges"] for p in range(lo, hi + 1)]
-        if not pages or not numbers:
-            return None
-        low = section.low_pages(loc, pages)
-        pages, _ = candidates.apply_cached_ocr(
-            pages, low, ocr.cached_pages(path, low, f.root / "ocr"))
-        return pages, numbers
-
     manifest = prepare(out_dir, f.cache, items, abstracts, load,
                        candidates.git_head())
     print("spike-ins prepared: %d" % len(manifest))
