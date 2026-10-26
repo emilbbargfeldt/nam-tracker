@@ -21,7 +21,8 @@ OCR, the median characters per text page of the same authority (as if all of
 them become candidates; the 27.3 M method imputes the same way), and the share of
 layer 1 pages that have no text.
 
-Usage: NAM_DATA=... python -I -m studies.nam.extract.candidates [--pilot]
+Usage: NAM_DATA=... python -m studies.nam.extract.candidates [--pilot | --v6-tokens]
+(--v6-tokens: one line, token bounds of the PREREG v6 A windows; writes nothing)
 """
 import csv
 import hashlib
@@ -87,14 +88,82 @@ def folded_chars(text):
     return len(" ".join(text.split()))
 
 
+WINDOW_LINES = 10  # PREREG v6 (a)
+
+
+def a_hit_lines(text):
+    """0-based indices of the raw lines of one page that hold the start of an
+    A hit. Hits are found on the normalized text; an offset is mapped back to
+    a line with the normalized length of the line prefixes. A hit on a word
+    split at a line end can land one line off (the prefix keeps the hyphen),
+    which a window of +-10 lines absorbs."""
+    hits = keywords.match_page(text)["A"]
+    if not hits:
+        return set()
+    lines = text.split("\n")
+    prefix = [None] * (len(lines) + 1)
+
+    def norm_len(k):
+        if prefix[k] is None:
+            prefix[k] = len(keywords._normalize("\n".join(lines[:k])))
+        return prefix[k]
+
+    out = set()
+    for _, start, _ in hits:
+        lo, hi = 1, len(lines)  # smallest k with norm_len(k) > start
+        while lo < hi:
+            mid = (lo + hi) // 2
+            if norm_len(mid) > start:
+                hi = mid
+            else:
+                lo = mid + 1
+        out.add(lo - 1)
+    return out
+
+
+def _runs(numbers):
+    """Contiguous runs of page numbers."""
+    runs = []
+    for n in sorted(numbers):
+        if runs and runs[-1][-1] == n - 1:
+            runs[-1].append(n)
+        else:
+            runs.append([n])
+    return runs
+
+
+def a_window_chars(pages, numbers, radius=WINDOW_LINES):
+    """Whitespace-folded characters of the A windows (PREREG v6 a): +-radius
+    lines around every A hit, overlapping windows merged; a window near a page
+    edge continues onto the adjacent layer 1 page (lines of a run of
+    contiguous pages are one sequence)."""
+    total = 0
+    for run in _runs(numbers):
+        lines, hits = [], []
+        for n in run:
+            page_lines = pages[n - 1].split("\n")
+            hits += [len(lines) + i for i in a_hit_lines(pages[n - 1])]
+            lines += page_lines
+        merged = []
+        for h in sorted(hits):
+            lo, hi = max(0, h - radius), min(len(lines) - 1, h + radius)
+            if merged and lo <= merged[-1][1] + 1:
+                merged[-1][1] = max(merged[-1][1], hi)
+            else:
+                merged.append([lo, hi])
+        for lo, hi in merged:
+            total += folded_chars("\n".join(lines[lo:hi + 1]))
+    return total
+
+
 def estimate_tokens(pages, union):
     return sum(cost.tokens(folded_chars(pages[p - 1])) for p in union)
 
 
 def check_blind_codings(show=None):
-    """Raise BlindingError unless git HEAD holds coding_template.csv with A, B,
-    C and D exactly "0" or "1" (after strip) for all 15 coder drugs. The error
-    names row and column, never the value."""
+    """Raise BlindingError unless git HEAD holds coding_template.csv with A
+    exactly "0" or "1" (after strip) for all 15 coder drugs (PREREG v6: B-D
+    are ignored). The error names row and column, never the value."""
     if show is None:
         def show():
             proc = subprocess.run(["git", "show", "HEAD:" + CODING], cwd=REPO,
@@ -104,15 +173,18 @@ def check_blind_codings(show=None):
     if not text:
         raise BlindingError("blind codings are not in git HEAD")
     coders = pilot_coder_names()
-    rows = {(r.get("drug") or "").strip(): (n, r) for n, r in
-            enumerate(csv.DictReader(io.StringIO(text)), 2)}
+    rows = {}
+    for n, r in enumerate(csv.DictReader(io.StringIO(text)), 2):
+        name = (r.get("drug") or "").strip()
+        if name in rows:
+            raise BlindingError("row %d repeats an earlier drug" % n)
+        rows[name] = (n, r)
     for i, name in enumerate(coders, 1):
         if name not in rows:
             raise BlindingError("no row for coder drug %d of %d" % (i, len(coders)))
         n, row = rows[name]
-        for col in "ABCD":
-            if (row.get(col) or "").strip() not in ("0", "1"):
-                raise BlindingError("row %d column %s must be 0 or 1" % (n, col))
+        if (row.get("A") or "").strip() not in ("0", "1"):
+            raise BlindingError("row %d column A must be 0 or 1" % n)
 
 
 def pilot_coder_names():
@@ -158,7 +230,7 @@ def write_document(out_dir, doc_id, authority_id, per_code):
     tmp.replace(path)
 
 
-def process_document(item, path, ocr_dir, out_dir):
+def process_document(item, path, ocr_dir, out_dir, windows_only=False):
     """Run one document. Returns a stats dict, or {"reason": ...} when there is
     no layer 1 text (no PDF in the cache or no pages)."""
     from studies.nam.inventory import section
@@ -172,27 +244,33 @@ def process_document(item, path, ocr_dir, out_dir):
     low = section.low_pages(loc, pages)
     cached = ocr.cached_pages(path, low, ocr_dir)
     pages, missing = apply_cached_ocr(pages, low, cached)
-    per_code, union = candidate_pages(pages, numbers)
-    write_document(out_dir, doc_id_of(item), item["id"], per_code)
     lowset = set(low)
     text = [folded_chars(pages[p - 1]) for p in numbers if p not in lowset]
+    mean = sum(text) / len(text) if text else None
+    if windows_only:
+        return {"pages": len(numbers), "missing": missing, "mean_text_chars": mean,
+                "tokens": cost.tokens(a_window_chars(pages, numbers))}
+    per_code, union = candidate_pages(pages, numbers)
+    write_document(out_dir, doc_id_of(item), item["id"], per_code)
     return {"pages": len(numbers), "candidates": len(union),
             "tokens": estimate_tokens(pages, union), "missing": missing,
-            "mean_text_chars": sum(text) / len(text) if text else None}
+            "mean_text_chars": mean}
 
 
-def run_all(items, fetcher, out_dir):
-    """Process items; returns aggregates and the list of documents with
-    missing text. Writes only under out_dir."""
-    out_dir = Path(out_dir)
-    out_dir.mkdir(parents=True, exist_ok=True)
+def run_all(items, fetcher, out_dir, windows_only=False):
+    """Process items; returns aggregates. Writes only under out_dir. With
+    windows_only (PREREG v6 token count) nothing is written and tokens are
+    those of the A windows."""
+    if not windows_only:
+        out_dir = Path(out_dir)
+        out_dir.mkdir(parents=True, exist_ok=True)
     agg = {"documents": 0, "pages": 0, "candidate_pages": 0, "tokens": 0.0,
            "pages_without_text": 0, "documents_without_text": 0}
     means, missing_by = {}, {}
     log = []
     for item in items:
         res = process_document(item, fetcher.path_for(item["url"]),
-                               fetcher.root / "ocr", out_dir)
+                               fetcher.root / "ocr", out_dir, windows_only)
         doc_id = doc_id_of(item)
         if "reason" in res:
             agg["documents_without_text"] += 1
@@ -200,7 +278,7 @@ def run_all(items, fetcher, out_dir):
             continue
         agg["documents"] += 1
         agg["pages"] += res["pages"]
-        agg["candidate_pages"] += res["candidates"]
+        agg["candidate_pages"] += res.get("candidates", 0)
         agg["tokens"] += res["tokens"]
         au = item["authority"]
         if res["mean_text_chars"] is not None:
@@ -215,9 +293,10 @@ def run_all(items, fetcher, out_dir):
     agg["tokens_upper"] = agg["tokens_lower"] + sum(
         cost.tokens(n * st.median(means.get(au) or pooled))
         for au, n in missing_by.items() if pooled)
-    with open(out_dir / "missing_text.jsonl", "w") as fh:
-        for r in log:
-            fh.write(json.dumps(r) + "\n")
+    if not windows_only:
+        with open(out_dir / "missing_text.jsonl", "w") as fh:
+            for r in log:
+                fh.write(json.dumps(r) + "\n")
     return agg
 
 
@@ -248,7 +327,15 @@ def format_aggregates(agg):
 
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
+    unknown = [a for a in argv if a not in ("--pilot", "--v6-tokens")]
+    if unknown:
+        print("unknown option (nothing run)")
+        return 2
     pilot = "--pilot" in argv
+    v6 = "--v6-tokens" in argv
+    if pilot and v6:
+        print("--v6-tokens is not allowed with --pilot (blinding)")
+        return 2
     if pilot:
         try:
             check_blind_codings()
@@ -266,6 +353,12 @@ def main(argv=None):
         print("stopped: pilot skipped: %d of %d (nothing written)"
               % (skipped, len(keys)))
         return 2
+    if v6:
+        agg = run_all(items, f, None, windows_only=True)
+        print("pilot skipped: %d of %d" % (skipped, len(keys)))
+        print("v6 window tokens lower / upper (chars/4): %.0f / %.0f"
+              % (agg["tokens_lower"], agg["tokens_upper"]))
+        return 0
     out_dir = f.root / ("candidates_pilot" if pilot else "candidates")
     agg = run_all(items, f, out_dir)
     write_manifest(out_dir, agg)

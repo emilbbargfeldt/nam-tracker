@@ -373,3 +373,28 @@ bound (+ imputed tokens for all low-text pages without OCR, as if all become
 candidates; imputation = median over documents of the mean characters per text
 page, same authority, pooled if the authority has none). Phase 0 cost is judged on the upper bound. The run is repeated
 after OCR has been run on the full set (after 2026-10-31). No outcome has been seen.
+
+## 2026-10-26: Scope to category A (PREREG v6); search building blocks
+
+Keyword candidates covered 82 % of layer 1 pages, so PREREG version 6 reduces
+the scope to the primary outcome: the model reads only A windows (+-10 lines
+around each A hit, overlapping windows merged, a window near a page edge
+continuing onto the adjacent layer 1 page); category S is recorded by keyword
+only; B, C and D are dropped from this version. Blind coding covers A only
+(1 = mentioned, 0 = not mentioned); the `--pilot` guard in candidates.py
+requires A = 0 or 1 for all 15 coder drugs in git HEAD and ignores B-D.
+`candidates.py --v6-tokens` prints one pair of token bounds (lower, upper) for
+the window design, writes nothing, and is refused with `--pilot`; unknown
+options stop the run.
+
+`core/search.py` is the study-independent page search (corpus = PDFs plus
+metadata.json, pattern file, JSONL output, counts on stdout). A NAM corpus is
+refused by metadata name, by path (symlinks resolved; NAM_DATA must be set) and
+without the flag `--nam-after-pilot-verdict`, which in turn needs
+`studies/nam/pilot/VERDICT.md` in git HEAD. Tested on artificial data only.
+The plan for the wider system is in `docs/PLAN-search-system.md` (no code yet).
+Known limits: a direct call of `search_corpus` with a custom verdict function
+bypasses the guard (convention); any non-empty VERDICT.md in HEAD unlocks it.
+
+No outcome has been seen; only aggregate counts across all codes were viewed.
+

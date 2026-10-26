@@ -90,20 +90,18 @@ def coders(monkeypatch):
     monkeypatch.setattr(candidates, "pilot_coder_names", lambda: CODERS)
 
 
-def _coding(value="1", at=None):
-    """All coder rows with value, or all 0 except column B of row `at`."""
+def _coding(value="1", at=None, other="x"):
+    """All coder rows with value in A (B-D = other), or A = 0 except row `at`."""
     rows = ["drug,agency,year,A,B,C,D"]
     for i, name in enumerate(CODERS):
-        vals = [value] * 4 if at is None else ["0"] * 4
-        if at == i:
-            vals[1] = value
-        rows.append("%s,EMA,2020,%s" % (name, ",".join(vals)))
+        a = value if (at is None or at == i) else "0"
+        rows.append("%s,EMA,2020,%s,%s,%s,%s" % (name, a, other, other, other))
     return "\n".join(rows) + "\n"
 
 
-def test_correct_codings_accepted(coders):
+def test_correct_codings_accepted_and_b_to_d_ignored(coders):
     candidates.check_blind_codings(lambda: _coding("1"))
-    candidates.check_blind_codings(lambda: _coding("0"))
+    candidates.check_blind_codings(lambda: _coding("0", other=""))
     candidates.check_blind_codings(lambda: _coding(" 1 "))
 
 
@@ -112,7 +110,7 @@ def test_bad_values_rejected_without_the_value(coders, bad):
     with pytest.raises(candidates.BlindingError) as e:
         candidates.check_blind_codings(lambda: _coding(bad, at=3))
     msg = str(e.value)
-    assert "row 5 column B" in msg
+    assert "row 5 column A" in msg
     if bad:
         assert bad not in msg
 
@@ -216,7 +214,7 @@ def test_run_all_output_only_in_out_dir_and_aggregates(tmp_path):
     candidates.write_manifest(out, agg)
     m = json.loads((out / "manifest.json").read_text())
     assert m["keywords_md5"] == candidates.md5_of(keywords.__file__)
-    assert m["prereg_version"] == 5 and len(m["git_head"]) == 40
+    assert m["prereg_version"] >= 5 and len(m["git_head"]) == 40
     assert m["time"]
 
 
@@ -226,8 +224,8 @@ def test_token_estimate_is_chars_over_four():
     assert candidates.estimate_tokens(pages, [2]) == len("bb cc dd eeeee") / 4
 
 
-def test_prereg_version_is_five():
-    assert candidates.prereg_version() == 5
+def test_prereg_version_is_read_from_prereg():
+    assert candidates.prereg_version() >= 5
 
 
 def test_ascii_only():
@@ -304,3 +302,99 @@ def test_doc_id_differs_for_same_name_and_year():
     b = dict(a, id="2")
     assert candidates.doc_id_of(a) != candidates.doc_id_of(b)
     assert len(candidates.doc_id_of(dict(a, name="x" * 500))) < 100
+
+
+# PREREG v6 windows: +-10 lines around each A hit, merged, across page edges.
+
+def lines_page(n, hits=(), prefix="p"):
+    """n lines, 'xx' filler (2 chars each); hits = {line index: text}."""
+    hits = dict(hits)
+    return "\n".join(hits.get(i, "xx") for i in range(n))
+
+
+def test_hit_line_is_found_also_after_a_hyphen_join():
+    text = lines_page(30, {5: "an organ-", 6: "on-a-chip here"})
+    assert candidates.a_hit_lines(text) <= {5, 6} and candidates.a_hit_lines(text)
+    assert candidates.a_hit_lines(lines_page(30, {20: "an organoid"})) == {20}
+    assert candidates.a_hit_lines(lines_page(30)) == set()
+
+
+def test_zero_hits_is_zero_window_chars():
+    assert candidates.a_window_chars([lines_page(30)], [1]) == 0
+
+
+def test_single_window_is_21_lines():
+    pages = [lines_page(60, {30: "organoid"})]
+    got = candidates.a_window_chars(pages, [1])
+    lines = ["xx"] * 21
+    lines[10] = "organoid"
+    assert got == len(" ".join(" ".join(lines).split()))
+
+
+def test_overlapping_windows_are_merged_once():
+    two = [lines_page(80, {30: "organoid", 40: "organoid"})]
+    one_span = candidates.a_window_chars(two, [1])
+    lines = ["xx"] * 31  # lines 20..50
+    lines[10] = lines[20] = "organoid"
+    assert one_span == len(" ".join(" ".join(lines).split()))
+    apart = [lines_page(80, {10: "organoid", 60: "organoid"})]
+    win = len(" ".join(["xx"] * 10 + ["organoid"] + ["xx"] * 10))
+    assert candidates.a_window_chars(apart, [1]) == 2 * win
+
+
+def test_window_continues_onto_adjacent_page():
+    pages = [lines_page(30), lines_page(30, {2: "organoid"})]
+    # hit on line 2 of page 2: window starts 8 lines before, on page 1
+    got = candidates.a_window_chars(pages, [1, 2])
+    lines = ["xx"] * (8 + 13)  # 8 lines of page 1, lines 0..12 of page 2
+    lines[8 + 2] = "organoid"
+    assert got == len(" ".join(" ".join(lines).split()))
+    # not allowed to cross a gap in the layer 1 pages
+    assert candidates.a_window_chars(pages, [2]) < got
+
+
+def test_windows_only_pages_in_layer1():
+    pages = [lines_page(30, {5: "organoid"}), lines_page(30)]
+    assert candidates.a_window_chars(pages, [2]) == 0
+
+
+def test_mutant_radius_or_edge_is_caught(monkeypatch):
+    pages = [lines_page(30), lines_page(30, {2: "organoid"})]
+    good = candidates.a_window_chars(pages, [1, 2])
+    # mutant 1: window does not cross the page edge (pages searched alone)
+    alone = sum(candidates.a_window_chars(pages, [n]) for n in (1, 2))
+    assert alone != good
+    # mutant 2: wrong radius
+    assert candidates.a_window_chars(pages, [1, 2], radius=5) != good
+
+
+def test_v6_option_refused_with_pilot(capsys):
+    assert candidates.main(["--pilot", "--v6-tokens"]) == 2
+
+
+def test_v6_run_writes_nothing_and_prints_one_line(tmp_path, monkeypatch, capsys):
+    from tests.test_inventory_measure import make_pdf
+
+    class F:
+        root = tmp_path / "data"
+
+        def path_for(self, url):
+            return tmp_path / url
+
+    make_pdf(tmp_path / "u1", ["organoid " + FILLER, page()])
+    items = [{"id": "1", "name": "One", "authority": "EMA", "year": 2020,
+              "format": "pharmtox", "url": "u1"}]
+    agg = candidates.run_all(items, F(), None, windows_only=True)
+    assert agg["tokens_lower"] > 0 and agg["tokens_upper"] >= agg["tokens_lower"]
+    assert not (tmp_path / "data").exists()
+
+
+def test_unknown_option_runs_nothing(capsys):
+    assert candidates.main(["--v6-token"]) == 2
+    assert "nothing run" in capsys.readouterr().out
+
+
+def test_repeated_coder_row_rejected(coders):
+    text = _coding("1") + "d0,EMA,2020,,,,\n"
+    with pytest.raises(candidates.BlindingError):
+        candidates.check_blind_codings(lambda: text)
