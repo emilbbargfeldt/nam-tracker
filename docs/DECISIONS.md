@@ -465,3 +465,18 @@ was made explicit were re-checked by Emil; changed rows are marked 'revised:
 Spike-in set outcome: 4 batches (40 abstracts) were drawn and coded under the
 fill rule; 21 have A = 1 and all 21 are used, from all drawn batches, with no
 exclusions.
+
+## 2026-10-26: Spike-in code details (PREREG v7 a2)
+
+Eligible pages are layer 1 pages with a text layer (at least 100 non-blank
+characters) that are not A candidates. Documents that cannot be read or have no
+eligible page are skipped in seed order; this is the only text-dependent part of
+the selection, so pages with little text are unreachable. A keyword find also
+requires an A hit in the inserted text itself. A model find requires an A
+finding on the spiked page whose verified quote lies at least 50 % inside the
+inserted text (PREREG v8); every occurrence of the quote on the page is checked, and a
+fuzzy match is located by its best cluster of matching blocks. The run writes
+totals only (totals.json), not per-spike results, and refuses if keywords.py or
+the extraction prompt changed since prepare. Prepare refuses with uncommitted
+changes under studies, tests or docs, and the cache is read only (nothing is
+fetched). A window is sent as one prompt without chunking.

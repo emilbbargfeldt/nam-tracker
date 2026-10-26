@@ -132,17 +132,19 @@ def _runs(numbers):
     return runs
 
 
-def a_window_chars(pages, numbers, radius=WINDOW_LINES):
-    """Whitespace-folded characters of the A windows (PREREG v6 a): +-radius
-    lines around every A hit, overlapping windows merged; a window near a page
-    edge continues onto the adjacent layer 1 page (lines of a run of
-    contiguous pages are one sequence)."""
-    total = 0
+def a_windows(pages, numbers, radius=WINDOW_LINES):
+    """The A windows (PREREG v6 a): +-radius lines around every A hit,
+    overlapping windows merged; a window near a page edge continues onto the
+    adjacent layer 1 page (lines of a run of contiguous pages are one
+    sequence). Each window is a list of segments [page, first line index on
+    that page (0-based), [lines]]."""
+    out = []
     for run in _runs(numbers):
-        lines, hits = [], []
+        lines, owner, hits = [], [], []
         for n in run:
             page_lines = pages[n - 1].split("\n")
             hits += [len(lines) + i for i in a_hit_lines(pages[n - 1])]
+            owner += [(n, i) for i in range(len(page_lines))]
             lines += page_lines
         merged = []
         for h in sorted(hits):
@@ -152,8 +154,21 @@ def a_window_chars(pages, numbers, radius=WINDOW_LINES):
             else:
                 merged.append([lo, hi])
         for lo, hi in merged:
-            total += folded_chars("\n".join(lines[lo:hi + 1]))
-    return total
+            window = []
+            for k in range(lo, hi + 1):
+                n, i = owner[k]
+                if window and window[-1][0] == n:
+                    window[-1][2].append(lines[k])
+                else:
+                    window.append([n, i, [lines[k]]])
+            out.append(window)
+    return out
+
+
+def a_window_chars(pages, numbers, radius=WINDOW_LINES):
+    """Whitespace-folded characters of the A windows."""
+    return sum(folded_chars("\n".join(ln for _, _, lines in w for ln in lines))
+               for w in a_windows(pages, numbers, radius))
 
 
 def estimate_tokens(pages, union):
