@@ -347,3 +347,29 @@ A timing test runs all patterns on 20,000 characters of "a", "a-", "a " and
 No outcome has been seen. The pilot extraction output in `$NAM_DATA/extract/`
 has not been viewed, counted or evaluated; it stays blinded until Emil's 15
 blind codings are committed.
+
+## 2026-10-26: Layer 2 run (candidate pages)
+
+`studies/nam/extract/candidates.py` runs keywords.py per layer 1 page (text
+layer, plus OCR text from the cache where it is longer; no OCR is started, no
+network) and writes only page numbers and counts per document and code to
+`$NAM_DATA/candidates/`: one JSONL file per document, `manifest.json` (md5 of
+keywords.py, PREREG version, git HEAD, time, aggregates) and
+`missing_text.jsonl`. Page numbers are 1-based as in layer 1. The pilot drugs
+are skipped; stdout shows "pilot skipped: N of 30", and a normal run with N
+below 30 stops before any candidate file is written (error shows N only). `--pilot` runs only if coding_template.csv in git HEAD (not the
+working copy) has A-D exactly 0 or 1 for all 15 coder drugs (errors name row
+and column, never the value). Blind coding values: 1 = mentioned, 0 = not
+mentioned. the result goes to
+`$NAM_DATA/candidates_pilot/` and nothing about it is printed. stdout shows
+aggregates only: documents, layer 1 pages, candidate pages (union of the
+codes), tokens lower and upper, share of pages without text, documents without
+layer 1 text. Documents without a PDF or with missing OCR are logged, not
+errors.
+
+Tokens = chars/4 (same method as 27.3 M, which also used whitespace-folded
+characters); manifest shows a lower bound (raw candidate pages) and an upper
+bound (+ imputed tokens for all low-text pages without OCR, as if all become
+candidates; imputation = median over documents of the mean characters per text
+page, same authority, pooled if the authority has none). Phase 0 cost is judged on the upper bound. The run is repeated
+after OCR has been run on the full set (after 2026-10-31). No outcome has been seen.

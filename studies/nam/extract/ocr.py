@@ -50,9 +50,25 @@ def ocr_page(pdf, page, run=subprocess.run):
         return proc.stdout
 
 
+def _folder(pdf, cache_dir):
+    return Path(cache_dir) / hashlib.sha256(Path(pdf).name.encode()).hexdigest()[:16]
+
+
+def cached_pages(pdf, numbers, cache_dir):
+    """{page: text} for the pages already in the cache. Nothing is made and
+    nothing is written."""
+    folder = _folder(pdf, cache_dir)
+    out = {}
+    for p in numbers:
+        path = folder / ("page_%04d.txt" % p)
+        if path.exists():
+            out[p] = path.read_text()
+    return out
+
+
 def ocr_pages(pdf, numbers, cache_dir, run=subprocess.run):
     """{page: text}; each page is read once and kept in the cache."""
-    folder = Path(cache_dir) / hashlib.sha256(Path(pdf).name.encode()).hexdigest()[:16]
+    folder = _folder(pdf, cache_dir)
     folder.mkdir(parents=True, exist_ok=True)
     out = {}
     for p in numbers:
