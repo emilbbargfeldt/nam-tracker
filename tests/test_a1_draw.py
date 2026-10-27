@@ -54,11 +54,80 @@ def test_hits_use_terms_only_not_keywords():
     assert a1.hit_pages(pages, [1, 2, 3], a1.compile_terms(TERMS)) == [2, 3]
 
 
-def test_hits_are_case_and_whitespace_flexible_literal():
-    rx = a1.compile_terms(["tissue chip"])
-    assert rx[0].search("TISSUE\n  Chip")
-    assert not rx[0].search("tissue-chip")
-    assert not a1.compile_terms(["a.c"])[0].search("abc")
+def matches(term, text):
+    return bool(a1.page_matches(text, a1.compile_terms([term])))
+
+
+@pytest.mark.parametrize("term, text", [
+    ("organoid", "Liver ORGANOIDS were used."),
+    ("organ on a chip", "an organ-on-a-chip system"),
+    ("organ on a chip", "Organ-On-A-Chip and organ on a chip"),
+    ("organ on a chip", "organ on\na chip"),
+    ("organ on a chip", "organ-on-\na-chip"),
+    ("organ-on-a-chip", "organ on a chip"),
+    ("3D culture", "3D-culture of cells"),
+    ("3D culture", "3D\nculture"),
+    ("3D culture", "3d\u2011culture"),
+    ("organoid", "an organ-\noid model"),
+    ("tissue chip", "tissue-chip"),
+    ("b-TCP", "beta-TCP scaffold"),
+    ("b-TCP", "\u03b2-TCP scaffold"),
+    ("b-TCP", "B-TCP and b TCP"),
+    ("b-TCP", "beta\u2010TCP"),
+    ("beta-TCP", "b-TCP"),
+    ("\u03b2-TCP", "b-TCP"),
+    ("a-TCP", "\u03b1-TCP"),
+    ("a-TCP", "alpha-TCP"),
+    ("iPSC-derived", "hiPSC-derived cells"),
+    ("induced pluripotent stem cell", "Induced\nPluripotent Stem Cells"),
+])
+def test_matching_rule_positive(term, text):
+    assert matches(term, text)
+
+
+@pytest.mark.parametrize("term, text", [
+    ("organ on a chip", "organ on chip"),
+    ("b-TCP", "sub-TCP"),
+    ("b-TCP", "bTCP"),
+    ("a-TCP", "beta-TCP"),
+    ("organoid", "organ oid"),
+    ("3D culture", "3D cult"),
+    ("tissue chip", "tissuechip"),
+])
+def test_matching_rule_negative(term, text):
+    assert not matches(term, text)
+
+
+def test_matching_rule_keeps_the_line_of_the_match():
+    text = "\n".join("line %d" % i for i in range(8))
+    text = text.replace("line 4", "an organ-on-\na-chip model")
+    assert a1.page_matches(text, a1.compile_terms(["organ on a chip"]))[0] == 4
+    assert a1.page_matches("x\norgan-\noid", a1.compile_terms(["organoid"]))[0] == 1
+
+
+def test_mutant_literal_separators_is_caught(monkeypatch):
+    import re
+    assert matches("organ on a chip", "organ-on-a-chip")
+    monkeypatch.setattr(a1, "term_regex", lambda t: re.compile(re.escape(t), re.I))
+    assert not matches("organ on a chip", "organ-on-a-chip")
+
+
+def test_mutant_without_greek_folding_is_caught(monkeypatch):
+    assert matches("b-TCP", "\u03b2-TCP")
+    monkeypatch.setattr(a1, "GREEK", {})
+    assert not matches("b-TCP", "\u03b2-TCP")
+
+
+def test_mutant_without_hyphenation_variant_is_caught(monkeypatch):
+    assert matches("organoid", "organ-\noid")
+    orig = a1.folded_variants
+    monkeypatch.setattr(a1, "folded_variants", lambda text: orig(text)[:1])
+    assert not matches("organoid", "organ-\noid")
+
+
+def test_empty_term_is_refused():
+    with pytest.raises(a1.A1Error):
+        a1.term_regex(" - ")
 
 
 def test_index_keeps_only_documents_with_hits_and_skips_unreadable():
@@ -266,3 +335,46 @@ def test_main_rejects_bad_arguments(capsys):
 
 def test_seed_constant():
     assert a1.SEED == 20261031 and a1.BATCH == 10 and a1.MAX_BATCHES == 5
+
+
+@pytest.mark.parametrize("term, text", [
+    ("organoid", "organ\u00ad\noid"),                 # soft hyphen at a line end
+    ("organoid", "organ\u00ad \r\n  oid"),
+    ("organ on a chip", "organ\r\non\r\na\r\nchip\r\n"),
+    ("b-TCP", "(b-TCP)"),
+    ("b-TCP", "HA/b-TCP and Ca-b-TCP"),
+    ("organoid", "organ-\noid\n"),
+])
+def test_matching_rule_more_positive(term, text):
+    assert matches(term, text)
+
+
+@pytest.mark.parametrize("term, text", [
+    ("b-TCP", "alpha-TCP"),
+    ("organoid", "organ-\n\noid"),                     # a blank line does not join
+    ("organoid", "organ\n- oid"),
+    ("b-TCP", "ab-TCP and 1b-TCP"),
+])
+def test_matching_rule_more_negative(term, text):
+    assert not matches(term, text)
+
+
+def test_line_index_with_crlf_dotted_capital_i_and_blank_lines():
+    text = "\u0130\u0130 line\r\n\r\nnext\r\nan organoid here\r\n"
+    assert a1.page_matches(text, a1.compile_terms(["organoid"])) == [3]
+    assert a1.page_matches("", a1.compile_terms(["organoid"])) == []
+    assert a1.page_matches("organoid\n", a1.compile_terms(["organoid"])) == [0]
+
+
+def test_hit_pages_filters_numbers_and_context_of_a_crlf_page():
+    pages = ["organoid", "nothing", "organoid"]
+    rx = a1.compile_terms(["organoid"])
+    assert a1.hit_pages(pages, [1, 2, 3], rx) == [1, 3]
+    assert a1.hit_pages(pages, [2], rx) == []
+    assert a1.hit_pages(pages, [3, 9], rx) == [3]
+    assert a1.context("a\nb\norganoid\nc", ["organoid"]) == ["a", "b", "organoid", "c"]
+
+
+def test_a_first_letter_token_without_a_hyphen_has_no_alias():
+    assert a1.term_regex("a chip").pattern == r"a[-\s]+chip"
+    assert "alpha" in a1.term_regex("a-TCP").pattern

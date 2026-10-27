@@ -516,3 +516,25 @@ move. The content has not been opened, shown, summarised or counted. It is kept
 as the v5(c) reference: candidate pages must contain every A finding of the full
 layer 1 model extraction already run. A new pilot extraction (v6 windows) goes
 to a new $NAM_DATA/extract, so the old chunks cannot be overwritten.
+
+## 2026-10-27: a1 terms and matching rule
+
+a1 terms: Emil's own (organoid, spheroid, organ on a chip, 3D culture, b-TCP,
+hydrogel, a-TCP, bioreactor); three added by Claude chat with Emil's approval
+(iPSC-derived, induced pluripotent stem cell, reconstructed human epidermis).
+The file (11 terms) is committed as a1_terms.txt.
+
+Matching rule of a1_draw.py (replaces the literal rule of the PREREG v8 entry
+above, before any a1 search was run): core's text normalization (NFKC, dash
+variants, invisible characters, whitespace) on terms and text, lower case,
+Greek letters as names; hyphen, space and line break are the same separator
+(organ on a chip = organ-on-a-chip, 3D culture = 3D-culture), a hyphen at a
+line end is also tried as hyphenation (organ-/oid = organoid); a first token a,
+b, g or d followed by a hyphen also matches alpha, beta, gamma, delta, and the
+reverse, with a boundary on the left (b-TCP = beta-TCP, not sub-TCP). Terms
+match inside longer words (organoid in organoids, iPSC-derived in
+hiPSC-derived); a soft hyphen at a line end is hyphenation. Not matched: terms
+written without a separator (bTCP), and variants that are not in the term file
+(organs-on-chips, organ-chip, iPSCs-derived, iPS-derived, three-dimensional
+culture, beta-tricalcium phosphate); the independent review of the matching
+listed these as limits of the term file, not of the rule.

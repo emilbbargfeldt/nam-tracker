@@ -1,7 +1,11 @@
 """Known positives for PREREG v8 (a1): local term search in the layer 1 text.
 
 Terms: studies/nam/pilot/a1_terms.txt (one term per line, blank lines and lines
-starting with # ignored; literal, case-insensitive, any whitespace). The file
+starting with # ignored). Matching: core's text normalization on terms and text,
+lower case, Greek letters as names; hyphen, space and line break are the same
+separator (organ on a chip = organ-on-a-chip), a hyphen at a line end is also
+tried as hyphenation (tis-/sue = tissue); a first token a, b, g or d followed by
+a hyphen also matches alpha, beta, gamma, delta (b-TCP = beta-TCP). The file
 must be committed (equal to git HEAD). keywords.py is not used (no keyword logic is imported or called). The layer 1
 text is the text layer plus cached OCR text of all non-pilot documents, read
 from the local cache (nothing is fetched or written there).
@@ -29,6 +33,8 @@ import random
 import re
 import sys
 from pathlib import Path
+
+from core.quotecheck import _normalize
 
 from studies.nam.extract import candidates, spikein
 
@@ -65,14 +71,76 @@ def committed_terms(path=None, committed=None):
     return read_terms(text)
 
 
+GREEK = {"\u03b1": "alpha", "\u03b2": "beta", "\u03b3": "gamma", "\u03b4": "delta"}
+LETTER = {"a": "alpha", "b": "beta", "g": "gamma", "d": "delta"}
+NAME = {v: k for k, v in LETTER.items()}
+
+
+def fold_line(line):
+    """core's text normalization (NFKC, dash variants, invisible characters,
+    whitespace), lower case, Greek letters as names."""
+    line = re.sub("\u00ad[ \t\r]*$", "-", line)  # soft hyphen at a line end
+    text = _normalize(line).lower()
+    for letter, name in GREEK.items():
+        text = text.replace(letter, name)
+    return text
+
+
+def folded_variants(text):
+    """[(folded text, line index of every character)]: the lines joined with a
+    space, and joined with end-of-line hyphens dropped (hyphenation)."""
+    pieces = [fold_line(ln) for ln in text.split("\n")]
+    out = []
+    for drop in (False, True):
+        chars, line_of = [], []
+        for i, piece in enumerate(pieces):
+            if chars and not (drop and chars[-1] == "-" and piece):
+                chars.append(" ")
+                line_of.append(i)
+            elif chars and drop:
+                chars.pop()
+                line_of.pop()
+            chars.extend(piece)
+            line_of.extend([i] * len(piece))
+        out.append(("".join(chars), line_of))
+    return out
+
+
+def term_regex(term):
+    """Regex for one term on folded text: hyphen, space and line break are the
+    same separator; a first token a, b, g or d followed by a hyphen also
+    matches alpha, beta, gamma, delta (and the reverse), with a boundary on the
+    left."""
+    folded = fold_line(term)
+    tokens = [t for t in re.split(r"[-\s]+", folded) if t]
+    if not tokens:
+        raise A1Error("empty term")
+    patterns, prefix = [re.escape(t) for t in tokens], ""
+    first = tokens[0]
+    has_hyphen = bool(re.match(r"[a-z]+-", folded))
+    if has_hyphen and (first in LETTER or first in NAME):
+        letter = first if first in LETTER else NAME[first]
+        patterns[0] = "(?:%s|%s)" % (letter, LETTER[letter])
+        prefix = "(?<![a-z0-9])"
+    return re.compile(prefix + r"[-\s]+".join(patterns))
+
+
 def compile_terms(terms):
-    return [re.compile(r"\s+".join(re.escape(t) for t in term.split()), re.IGNORECASE)
-            for term in terms]
+    return [term_regex(t) for t in terms]
+
+
+def page_matches(text, regexes):
+    """Line indices (0-based, raw lines) of the matches on a page."""
+    out = []
+    for folded, line_of in folded_variants(text):
+        for rx in regexes:
+            out.extend(line_of[m.start()] for m in rx.finditer(folded))
+    return sorted(set(out))
 
 
 def hit_pages(pages, numbers, regexes):
     return [n for n in sorted(numbers)
-            if 1 <= n <= len(pages) and any(rx.search(pages[n - 1]) for rx in regexes)]
+            if 1 <= n <= len(pages) and page_matches(pages[n - 1], regexes)]
 
 
 def build_index(doc_ids, load, terms):
@@ -111,16 +179,12 @@ def draw_batch(index, batch, seed=SEED):
 
 
 def context(page_text, terms, lines=CONTEXT_LINES):
-    """+-lines lines around the first match on the page."""
-    first = None
-    for rx in compile_terms(terms):
-        m = rx.search(page_text)
-        if m and (first is None or m.start() < first):
-            first = m.start()
-    if first is None:
+    """+-lines raw lines around the first match on the page."""
+    hits = page_matches(page_text, compile_terms(terms))
+    if not hits:
         return []
     rows = page_text.split("\n")
-    at = page_text[:first].count("\n")
+    at = hits[0]
     return rows[max(0, at - lines):at + lines + 1]
 
 
