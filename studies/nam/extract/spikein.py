@@ -28,7 +28,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from studies.nam.extract import candidates, chunks, cli, keywords, prompt, run
+from studies.nam.extract import candidates, cli, keywords, prompt, run, windows
 from studies.nam.inventory import measure
 
 SEED = 20261030
@@ -259,8 +259,7 @@ def inserted_windows(pages, numbers, row):
 
 
 def window_text(window):
-    return "".join(chunks.render(page, "\n".join(lines))
-                   for page, _, lines in window)
+    return windows.render_segments(window)
 
 
 def check_row(row, pages, numbers, caller):
@@ -329,16 +328,12 @@ def measure_all(out_dir, caller, say=print, keywords_path=KEYWORDS):
     return k, m, n
 
 
-def real_loader(f):
-    """({doc id: unit} without the pilot drugs, load(doc id)). load gives
-    (layer 1 pages, layer 1 page numbers) from the local cache (PDF text layer
-    and cached OCR text) or None. Nothing is fetched or written."""
+def make_loader(f, items):
+    """load(doc id) for a dict {doc id: unit}: (layer 1 pages, layer 1 page
+    numbers) from the local cache (PDF text layer and cached OCR text) or None.
+    Nothing is fetched, written or OCR'd."""
     from studies.nam.inventory import section
     from studies.nam.extract import ocr
-    from studies.nam.pilot import draw
-    units, _ = draw.universe(f)
-    keys = candidates.pilot_keys()
-    items = {candidates.doc_id_of(u): u for k, u in units.items() if k not in keys}
 
     def load(doc_id):
         item = items[doc_id]
@@ -354,7 +349,16 @@ def real_loader(f):
             pages, low, ocr.cached_pages(path, low, f.root / "ocr"))
         return pages, numbers
 
-    return items, load
+    return load
+
+
+def real_loader(f):
+    """({doc id: unit} without the pilot drugs, load(doc id))."""
+    from studies.nam.pilot import draw
+    units, _ = draw.universe(f)
+    keys = candidates.pilot_keys()
+    items = {candidates.doc_id_of(u): u for k, u in units.items() if k not in keys}
+    return items, make_loader(f, items)
 
 
 def main(argv=None):

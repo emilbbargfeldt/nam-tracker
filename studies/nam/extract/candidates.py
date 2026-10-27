@@ -221,7 +221,8 @@ def doc_id_of(item):
 
 
 def prereg_version(path=PREREG):
-    found = re.findall(r"version (\d+)", Path(path).read_text())
+    found = re.findall(r"(?m)^- \d{4}-\d{2}-\d{2} version (\d+)\b",
+                       Path(path).read_text())
     return max(map(int, found)) if found else None
 
 
