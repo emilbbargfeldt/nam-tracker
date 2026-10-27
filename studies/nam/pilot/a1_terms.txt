@@ -9,3 +9,10 @@ induced pluripotent stem cell
 reconstructed human epidermis
 a-TCP
 bioreactor
+organs on chips
+organ chip
+iPSCs
+iPS-derived
+three-dimensional culture
+beta-tricalcium phosphate
+alpha-tricalcium phosphate

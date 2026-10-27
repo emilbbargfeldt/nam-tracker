@@ -538,3 +538,11 @@ written without a separator (bTCP), and variants that are not in the term file
 (organs-on-chips, organ-chip, iPSCs-derived, iPS-derived, three-dimensional
 culture, beta-tricalcium phosphate); the independent review of the matching
 listed these as limits of the term file, not of the rule.
+
+## 2026-10-27: a1 term variants
+
+Spelling variants of Emil's terms suggested by the independent review, added
+before any draw was seen; first draw stopped unseen. Added (7): organs on
+chips, organ chip, iPSCs, iPS-derived, three-dimensional culture,
+beta-tricalcium phosphate, alpha-tricalcium phosphate. The term file now has 18
+terms.
