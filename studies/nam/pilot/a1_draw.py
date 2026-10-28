@@ -169,12 +169,14 @@ def pick_page(doc, hits, seed=SEED):
 
 
 def draw_batch(index, batch, seed=SEED):
-    """[(doc, page)] of batch N (1-based)."""
+    """[(doc, page)] of batch N (1-based). A later batch with fewer than
+    BATCH documents left takes all of them (DECISIONS 2026-10-28)."""
     order = draw_order(index, seed)
     chosen = order[BATCH * (batch - 1):BATCH * batch]
-    if len(chosen) < BATCH:
-        raise A1Error("not enough documents" if batch == 1
-                      else "batch cannot be drawn")
+    if batch == 1 and len(chosen) < BATCH:
+        raise A1Error("not enough documents")
+    if not chosen:
+        raise A1Error("batch cannot be drawn")
     return [(doc, pick_page(doc, index[doc], seed)) for doc in chosen]
 
 

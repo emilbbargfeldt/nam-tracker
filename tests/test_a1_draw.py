@@ -174,7 +174,7 @@ def test_batches_do_not_overlap_and_too_few_documents_fail():
     with pytest.raises(a1.A1Error):
         a1.draw_batch(few, 1)
     with pytest.raises(a1.A1Error):
-        a1.draw_batch(idx, 3)
+        a1.draw_batch(idx, 4)
 
 
 def test_context_is_plus_minus_three_lines_around_the_first_match():
@@ -316,7 +316,7 @@ def test_run_refuses_a_later_batch_when_the_search_result_changed(world):
 
 
 def test_later_batch_that_cannot_be_drawn_gives_a_generic_message():
-    idx = {"D%02d" % i: [1] for i in range(15)}
+    idx = {"D%02d" % i: [1] for i in range(10)}
     with pytest.raises(a1.A1Error) as e:
         a1.draw_batch(idx, 2)
     assert str(e.value) == "batch cannot be drawn"
@@ -378,3 +378,48 @@ def test_hit_pages_filters_numbers_and_context_of_a_crlf_page():
 def test_a_first_letter_token_without_a_hyphen_has_no_alias():
     assert a1.term_regex("a chip").pattern == r"a[-\s]+chip"
     assert "alpha" in a1.term_regex("a-TCP").pattern
+
+
+def pool(n):
+    return {"D%02d" % i: [1, 2, 3] for i in range(n)}
+
+
+def reference(idx, batch):
+    """Independent re-statement of the rule: seed order, one hit page each."""
+    order = sorted(idx)
+    random.Random("%d:a1" % a1.SEED).shuffle(order)
+    out = []
+    for doc in order[10 * (batch - 1):10 * batch]:
+        page = random.Random("%d:a1:%s" % (a1.SEED, doc)).choice(sorted(idx[doc]))
+        out.append((doc, page))
+    return out
+
+
+def test_last_batch_takes_all_remaining_documents():
+    idx = pool(25)
+    last = a1.draw_batch(idx, 3)
+    assert len(last) == 5
+    assert last == reference(idx, 3)
+    used = {d for b in (1, 2, 3) for d, _ in a1.draw_batch(idx, b)}
+    assert used == set(idx)
+
+
+def test_batch_after_exhausted_pool_fails():
+    for n in (20, 25):
+        idx = pool(n)
+        with pytest.raises(a1.A1Error) as e:
+            a1.draw_batch(idx, 4 if n == 25 else 3)
+        assert str(e.value) == "batch cannot be drawn"
+
+
+def test_batches_1_and_2_unchanged_by_the_partial_rule():
+    for n in (20, 25, 30):
+        idx = pool(n)
+        for b in (1, 2):
+            assert a1.draw_batch(idx, b) == reference(idx, b)
+
+
+def test_batch_1_still_needs_a_full_batch():
+    with pytest.raises(a1.A1Error) as e:
+        a1.draw_batch(pool(9), 1)
+    assert str(e.value) == "not enough documents"
