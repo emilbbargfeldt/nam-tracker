@@ -546,3 +546,9 @@ before any draw was seen; first draw stopped unseen. Added (7): organs on
 chips, organ chip, iPSCs, iPS-derived, three-dimensional culture,
 beta-tricalcium phosphate, alpha-tricalcium phosphate. The term file now has 18
 terms.
+
+## 2026-10-28: a1 coding, tables of contents
+
+Decided during batch 1, before any counting: a page that is a table of
+contents is coded A = 0 (it is not a data source on that page), with the note
+"TOC".
