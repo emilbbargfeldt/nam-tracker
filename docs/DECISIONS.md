@@ -552,3 +552,7 @@ terms.
 Decided during batch 1, before any counting: a page that is a table of
 contents is coded A = 0 (it is not a data source on that page), with the note
 "TOC".
+
+## 2026-10-28: a1 pool has fewer than 30 documents with term hits, so batch 3 cannot be a full batch.
+
+Rule (set before batch 3 is drawn; reason is the pool size, not the count of A=1): a1 ends at >=10 A=1, 50 draws, or when the pool is exhausted. Batch 3 = all remaining documents (fewer than 10).
