@@ -556,3 +556,34 @@ contents is coded A = 0 (it is not a data source on that page), with the note
 ## 2026-10-28: a1 pool has fewer than 30 documents with term hits, so batch 3 cannot be a full batch.
 
 Rule (set before batch 3 is drawn; reason is the pool size, not the count of A=1): a1 ends at >=10 A=1, 50 draws, or when the pool is exhausted. Batch 3 = all remaining documents (fewer than 10).
+
+## 2026-10-29: Pilot run lock (model, OCR precondition, combination of a1/a2)
+
+Set before the pilot extraction is run and before any outcome was seen.
+
+(a) Model. The pilot uses model claude-sonnet-5-5 with the frozen prompt
+(studies/nam/extract/prompt.py) and keywords.py. A change of model is a new
+pilot (rule set in this entry, not in PREREG). The a1 pool is exhausted (28 of
+28 drawn; 10 + 10 + 8 draws, commits 3e79ed1, c5614d1, 49ece01); how a1 and
+spike-ins are handled in any new pilot is decided in a new PREREG version
+before that pilot is run and logged before any outcome of that pilot is seen.
+
+(b) OCR precondition. The pilot is run only after OCR (extract/ocr.py,
+tesseract, cached) has been run on every layer 1 page below the text-layer
+threshold (100 non-blank characters) in all three parts: the 30 pilot drugs
+(PREREG, section Pilot; 15 blind-coded, 15 checked against quotes), (a1) the 28 coded
+a1 documents, and (a2) the documents that receive spike-ins. Counts before
+OCR, layer 1 pages without text: pilot drugs 137 (already OCR'd, see the
+entries of 2026-10-23 above, so unchanged; of the 137, 132 were replaced by
+OCR text and 7 are still under 100 characters after OCR, and the two groups
+overlap by 2 pages (derived: 132 + 7 - 137), i.e. replaced but still short), a2 documents 172 of 1574 pages (local measurement, not in git)
+(21 spike-in abstracts, provisional placement in 21 distinct documents from
+the current cache, counted 2026-10-29; placement depends on the OCR cache), a1 documents 371 of 2452 pages (28 documents; local measurement, not in git). Spike-in placement
+(spikein prepare) is made after OCR, so the pilot matches the real pipeline.
+The page counts are re-measured after OCR and logged as aggregates.
+
+(c) Combination. PREREG v8 (b) already states that the requirement is
+sensitivity >= 90 % on a1 and, separately, >= 90 % on a2.
+This is followed unchanged: a1 and a2 are each tested against 90 % with exact
+binomial confidence intervals for their own n. A pooled a1+a2 figure may be
+reported as a supplement, but has no pass/fail status.
