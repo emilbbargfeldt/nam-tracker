@@ -113,3 +113,17 @@ Unicode normalization.
   when the file is named like the public EPAR (Tuzulby); other
   variation-style names never count in fallback tiers. Evkeeza's initial
   report is filed only under a variation-style name and is left unknown.
+
+## a1 term matching (studies/nam/pilot/a1_draw.py, commit 02aa466)
+
+- **A single-letter alias (a-, b-, g-, d-) matches with a space as separator.**
+  The separator rule (hyphen, space and line break are one separator) also
+  applies to the first token of an alias term, so "a-tricalcium phosphate"
+  matches "is a tricalcium phosphate" or "a\ntricalcium phosphate", "a-TCP"
+  matches "a TCP", and "b-TCP" matches "group b TCP". Ordinary English, no alpha or beta phase.
+  Accepted: a1 is locked (matching rule and term file as committed), and false
+  draws are coded by hand by Emil and become A = 0. This does not affect a1
+  sensitivity (no true hit is lost); it only lowers the efficiency of the draw
+  (some draws are spent on false hits). Found in the independent review of the
+  regsearch copy of the matcher, 2026-10-29. regsearch is free to tighten its
+  own copy; this repository's matcher stays as it is.
