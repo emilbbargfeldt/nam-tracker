@@ -587,3 +587,33 @@ sensitivity >= 90 % on a1 and, separately, >= 90 % on a2.
 This is followed unchanged: a1 and a2 are each tested against 90 % with exact
 binomial confidence intervals for their own n. A pooled a1+a2 figure may be
 reported as a supplement, but has no pass/fail status.
+
+## 2026-11-01: OCR run for a1 and a2 (precondition (b) of 2026-10-29)
+
+Run on a Raspberry Pi, because the main analysis machine has no tesseract or
+poppler installed. Code: studies/nam/pilot/ocr_run.py, commit 9ef7e66 (tesseract
+5.5.0, 300 dpi, eng, via extract/ocr.py; cached in the OCR cache, existing pages
+never overwritten). Manifest r0 from ocr_list; a1 first, then a2, each reported
+separately. Numbers only, no text was shown.
+
+Layer 1 pages below 100 non-blank characters (before / replaced by OCR text /
+still below after OCR):
+
+- a1: 371 of 2452 pages (28 documents), 361 replaced, 13 still below. Derived:
+  371 - 361 = 10 not replaced, so 13 - 10 = 3 pages were replaced but are still
+  short.
+- a2: 172 of 1574 pages (21 documents), 165 replaced, 7 still below. Derived:
+  172 - 165 = 7 not replaced, so no replaced page is still short.
+
+Fixpoint of the a2 placement: ocr_list r1, run after the OCR, gives the same
+documents and the same low pages as r0 for a1 and for a2, with 0 pages not in
+the OCR cache. The document choice therefore does not change with the OCR cache
+(one round was enough).
+
+Check against PREREG v3 (c) and v8 (a1: text = text layer, OCR text from the
+cache where it is longer): every layer 1 page below the threshold of a1 and a2
+is in the OCR cache (todo 0 in r1), so the OCR precondition of 2026-10-29 (b)
+is met for a1 and a2, each on its own. The pages still below the threshold
+(13 and 7) are kept as they are; they are counted in the aggregate only and no
+extra rule is added. The 30 pilot drugs were already OCR'd (entries of
+2026-10-23). The pilot extraction itself has not been run by this entry.
