@@ -617,3 +617,92 @@ is met for a1 and a2, each on its own. The pages still below the threshold
 (13 and 7) are kept as they are; they are counted in the aggregate only and no
 extra rule is added. The 30 pilot drugs were already OCR'd (entries of
 2026-10-23). The pilot extraction itself has not been run by this entry.
+
+## 2026-11-05: Pilot verdict rules and a1 implementation
+
+Set before any pilot extraction is run, before any a1 model run, and before any
+output of either was seen. Implements PREREG v8 (b); it adds no new test.
+
+(a) Pass/fail is the point estimate. PREREG v8 (b) says "sensitivity >= 90 % on
+a1 and, separately, >= 90 % on a2; specificity >= 95 % and 0 unverified quotes
+on the 15 pilot drugs; exact binomial confidence intervals for the actual n of
+each set". The criterion is the point estimate k/n. The exact two-sided 95 %
+Clopper-Pearson interval is reported for every rate and is not a criterion.
+Reason: with n = 10 the one-sided 95 % lower bound is already only about 74 %
+(PREREG v7 (b)), so a lower-bound criterion could not be met at these n.
+
+Consequences at the actual n (A = 1 in the committed codes: a1 15 of 28 pages
+in a1_codes.csv, commit 49ece01; a2 21 of 40 abstracts in spikein_codes.csv):
+- a1, n = 15: at most 1 miss (14/15 = 93.3 %; 13/15 = 86.7 % fails).
+- a2, n = 21: at most 2 misses (19/21 = 90.5 %; 18/21 = 85.7 % fails).
+- Specificity, 15 blind-coded pilot drugs: 0 false positives (1 of 15 = 93.3 %
+  fails). A false positive is a drug coded A = 0 by Emil with at least one
+  accepted A finding from the pipeline (accepted by
+  windows.check_window_finding, see (h)).
+Illustration of the reported intervals (two-sided 95 %): 15/15 [78.2, 100],
+14/15 [68.1, 99.8], 21/21 [83.9, 100], 19/21 [69.6, 98.8]. A pass can come with
+a lower limit well below 90 %; this is accepted and is stated in the report.
+
+(b) Four sensitivity tests, each against 90 %: a1 keyword step, a1 full
+pipeline, a2 keyword step, a2 full pipeline (PREREG v8 (a1) (i)/(ii), (a2)
+(i)/(ii), unchanged; "each reported"). The verdict passes only if all four and
+the specificity and unverified-quote criteria pass. Reported with and without
+UNSURE rows (DECISIONS UNSURE rule); the verdict uses all rows as coded
+(DECISIONS 2026-10-26: "the requirement applies to all rows"; UNSURE rows are
+coded 0/1 by best judgement). The variant without UNSURE rows is reported and
+is not a criterion.
+
+The two steps of a test are not nested: the full pipeline can find A on a page
+that is not an A candidate, because an A window continues onto the adjacent
+layer 1 page (candidates.a_windows) and the quote check accepts any quote that
+lies in the window lines of a page. Each test is scored as defined; "full
+pipeline >= keyword step" is not assumed.
+
+(c) "0 unverified quotes" means 0 quotes rejected by core.quotecheck.verify_quote
+(entries with reason "quote not verified" in rejected.jsonl) on the 30 pilot
+drugs. Rejections for other reasons (code other than A, page or text outside
+the window) are not unverified quotes and are reported separately. The numbers
+of verify_quote rejections on a1 and a2 are reported too, with no pass/fail.
+
+(d) a1 set. Only pages coded A = 1 in a1_codes.csv count (n = 15). The 13 pages
+coded A = 0 are listed separately and are not part of the verdict (PREREG v8).
+Unit: the drawn layer 1 page. (i) keyword step: the page is an A candidate.
+(ii) full pipeline: an A finding on that page accepted by
+windows.check_window_finding, i.e. code A, page in the chunk, quote passes
+verify_quote on that page and on the window lines of that page (drug relevance
+not assessed).
+
+(e) a1 implementation (new module, committed before any run): reads the 15
+A = 1 pages through spikein.real_loader (same OCR rule as the pilot), applies
+candidates.candidate_pages / a_hit_lines and the window reader of windows.py
+with windows.window_chunks (windows above MAX_CHARS split at page boundaries)
+and windows.check_window_finding (not run.check_finding), and prints counts
+only. It refuses to run on a dirty
+tree, on changed keywords.py or prompt hash, or on a repeat (same lock as
+spikein.check_run_state). Model and prompt as in 2026-10-29 (a).
+
+(f) Manual quote check (supplement, no pass/fail). For the 15 pilot drugs that
+are not blind-coded, a tool shows each accepted A quote with its page. Emil
+answers the question "does the quote support category A?" with yes / no /
+UNSURE; the answers are stored in $NAM_DATA/pilot/quote_check.csv. Claude never
+codes. The counts are reported as a supplement.
+
+(g) Order. This entry and all scoring code (CI function with tests against known
+values, a1 module, scorer, quote-check tool) are committed before spikein
+prepare. Then: spikein prepare, spikein run, pilot extraction (--blind), a1
+run, verdict. The DECISIONS note on spikein prepare/run is committed only after
+spikein run (check_run_state compares git HEAD with the manifest). The scorer
+is run on the pilot-15 only after Emil's blind codings are committed.
+
+(h) One pipeline for pilot-30, a1 and a2 (requirement). The a1 module and the
+a2 run use exactly the pilot-30 window handling and acceptance check:
+(1) the chunks are those of windows.window_chunks (line 79 as of 060ee87), so a
+window above MAX_CHARS is split as in the pilot (windows.split_window, line 63
+as of 060ee87, called in window_chunks at line 83 as of 060ee87); a whole window
+is never sent as one call; (2) every finding is accepted or rejected by
+windows.check_window_finding. For a2 the 50 % overlap rule (PREREG v8) is
+applied after that check. spikein.check_row (line 265 as of 060ee87) is changed
+accordingly: today it sends whole windows (spikein.window_text, line 261 as of
+060ee87) and calls run.check_finding (line 283 as of 060ee87). The change is
+committed, with tests, before spikein prepare. No page-in-A-candidate condition
+is added to the test definitions.
