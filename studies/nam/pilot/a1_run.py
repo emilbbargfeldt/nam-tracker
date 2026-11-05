@@ -37,7 +37,18 @@ ID = re.compile(r"[A-Za-z0-9_]+")
 
 
 class A1Error(RuntimeError):
-    pass
+    """A failure that can happen in the middle of a run (chunks may already
+    have been sent and stored)."""
+
+
+class Refused(A1Error):
+    """A check that failed before any model call: nothing was run."""
+
+
+def failure_message(exc):
+    if isinstance(exc, (Refused, spikein.SpikeError)):
+        return "%s (nothing run)" % exc
+    return "stopped: %s; answered chunks are kept, no totals written" % exc
 
 
 def read_a1(path=None):
@@ -78,12 +89,12 @@ def load_drawn(drawn, items, load):
     loaded = {}
     for doc, pages_drawn in sorted(by_doc(drawn).items()):
         if doc not in items or not ID.fullmatch(doc):
-            raise A1Error("document is not in the non-pilot universe")
+            raise Refused("document is not in the non-pilot universe")
         result = load(doc)
         if result is None:
-            raise A1Error("no layer 1 text for a drawn document")
+            raise Refused("no layer 1 text for a drawn document")
         if not pages_drawn <= set(result[1]):
-            raise A1Error("drawn page is not a layer 1 page")
+            raise Refused("drawn page is not a layer 1 page")
         loaded[doc] = result
     return loaded
 
@@ -95,7 +106,7 @@ def prepare(out_dir, items, load, drawn, head, version, dirty, codes_md5=None,
     if dirty:
         raise spikein.SpikeError("uncommitted changes in the code base")
     if (out_dir / "manifest.jsonl").exists():
-        raise A1Error("manifest exists: prepare is not repeated")
+        raise Refused("manifest exists: prepare is not repeated")
     loaded = load_drawn(drawn, items, load)
     base = {"git_head": head, "keywords_md5": spikein.md5_of(keywords_path),
             "prompt_hash": prompt.prompt_hash(), "model": cli.MODEL,
@@ -104,6 +115,10 @@ def prepare(out_dir, items, load, drawn, head, version, dirty, codes_md5=None,
     rows = []
     for doc, page in sorted(set(drawn)):
         pages, numbers = loaded[doc]
+        try:
+            keyword_hit(page, pages, numbers)  # fail before any model call
+        except A1Error as exc:
+            raise Refused(str(exc)) from None
         hashes = [c["hash"] for c in selected_chunks(pages, numbers, {page}, max_chars)]
         rows.append(dict(base, doc=doc, page=page, chunk_hashes=hashes))
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -126,13 +141,13 @@ def check_state(out_dir, head, dirty, keywords_path=spikein.KEYWORDS, codes_md5=
     spikein.check_run_state(out_dir, head, dirty)
     for row in read_manifest(out_dir):
         if row["keywords_md5"] != spikein.md5_of(keywords_path):
-            raise A1Error("keywords.py changed since prepare")
+            raise Refused("keywords.py changed since prepare")
         if row["prompt_hash"] != prompt.prompt_hash():
-            raise A1Error("extraction prompt changed since prepare")
+            raise Refused("extraction prompt changed since prepare")
         if row["model"] != cli.MODEL:
-            raise A1Error("model differs from the manifest")
+            raise Refused("model differs from the manifest")
         if codes_md5 is not None and row["codes_md5"] != codes_md5:
-            raise A1Error("codes file changed since prepare")
+            raise Refused("codes file changed since prepare")
 
 
 def _send(chunk, pages, caller, doc_dir, attempts, out_dir, say):
@@ -224,15 +239,26 @@ def finalize(out_dir, loaded, manifest, max_chars):
 
 def measure(out_dir, load, caller, say=print, head=None, dirty=None,
             max_chars=windows.MAX_CHARS, keywords_path=spikein.KEYWORDS,
-            codes_md5=None):
+            codes_md5=None, expected=None):
     """One run: one attempt per unanswered chunk. Returns "done", "error" or
     "quota". totals.json is written only when every chunk is answered or given
-    up. Prints aggregates only."""
+    up. Prints aggregates only. expected: the (doc, page) list of the A = 1
+    codes; the manifest must hold exactly these pages. The chunk hashes of the
+    manifest must equal those of the pages as loaded now (data lock)."""
     out_dir = Path(out_dir)
     check_state(out_dir, head, dirty, keywords_path, codes_md5)
     manifest = read_manifest(out_dir)
     drawn = [(m["doc"], m["page"]) for m in manifest]
+    if expected is not None and sorted(drawn) != sorted(expected):
+        raise Refused("manifest pages differ from the A = 1 codes")
     loaded = load_drawn(drawn, {m["doc"]: None for m in manifest}, load)
+    for m in manifest:
+        pages, numbers = loaded[m["doc"]]
+        now = [c["hash"] for c in selected_chunks(pages, numbers, {m["page"]},
+                                                  max_chars)]
+        if m["max_chars"] != max_chars or now != m["chunk_hashes"]:
+            raise Refused("chunks differ from the manifest (page text or "
+                          "chunk size changed since prepare)")
     attempts = {}
     if (out_dir / "attempts.json").exists():
         attempts = json.loads((out_dir / "attempts.json").read_text())
@@ -288,10 +314,11 @@ def main(argv=None):
         cwd = out_dir / "cwd"
         cwd.mkdir(parents=True, exist_ok=True)
         status = measure(out_dir, load, lambda text: cli.call_claude(text, cwd),
-                         head=head, dirty=dirty, codes_md5=codes_md5)
+                         head=head, dirty=dirty, codes_md5=codes_md5,
+                         expected=read_a1())
     except (spikein.SpikeError, A1Error) as exc:
-        print("%s (nothing run)" % exc)
-        return 2
+        print(failure_message(exc))
+        return 3 if type(exc) is A1Error else 2
     return {"done": 0, "quota": 2, "error": 3}[status]
 
 

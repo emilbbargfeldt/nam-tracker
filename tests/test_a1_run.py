@@ -145,6 +145,10 @@ def test_two_drawn_pages_in_one_chunk_one_call(env):
 
 
 def test_equivalent_to_whole_document_pipeline(env):
+    """Shows that the chunk selection loses no finding on the drawn page
+    (whole-document chunks vs selected chunks, same fake). It does not prove
+    the model calls are independent; that rests on cli.build_argv (fresh
+    process, no tools, no session) and is argued in the module docstring."""
     out = prepared(env)
     run_all(out, env, Fake())
     pages, numbers = env[2]("DOC1")
@@ -388,6 +392,143 @@ def test_prepare_prints_counts_only(env):
     shown = "\n".join(lines)
     assert "pages: 1" in shown and "chunks to send: " in shown
     assert "DOC1" not in shown
+
+
+# review follow-up: data lock, manifest lock, messages, prepare checks --------
+
+def long_line(tag, i):
+    return ("Group %03d-%02d animals received the vehicle control by "
+            "oral gavage once daily for four weeks." % (tag, i))
+
+
+def make_long_doc():
+    """Page 2 has 45 lines with an A hit at line 2 and at line 42: two
+    separate windows that both hold page 2."""
+    rows = [long_line(2, i) for i in range(45)]
+    rows[2], rows[42] = LINE_2, LINE_7
+    return [filler(1), "\n".join(rows), filler(3)], [1, 2, 3]
+
+
+@pytest.fixture
+def env_long(tmp_path):
+    docs = {"DOC1": make_long_doc()}
+    return tmp_path / "a1", {"DOC1": {}}, (lambda d: docs[d]), [("DOC1", 2)]
+
+
+LONG_TABLE = ((LINE_2, 2), (LINE_7, 2))
+
+
+def test_changed_page_text_since_prepare_is_refused(env):
+    out = prepared(env)
+    pages, numbers = make_doc()
+    pages[1] = pages[1].replace("Group 002-00", "Group 002-xx")  # inside the window
+    fake = Fake()
+    changed = (env[0], env[1], lambda d: (pages, numbers), env[3])
+    with pytest.raises(a1_run.Refused, match="chunks differ"):
+        run_all(out, changed, fake)
+    assert fake.calls == []
+
+
+def test_chunk_size_change_since_prepare_is_refused(env):
+    out = prepared(env)
+    with pytest.raises(a1_run.Refused, match="chunks differ"):
+        run_all(out, env, Fake(), max_chars=500)
+
+
+def test_emptied_manifest_is_refused(env):
+    out = prepared(env)
+    (out / "manifest.jsonl").write_text("")
+    fake = Fake()
+    with pytest.raises(a1_run.Refused, match="A = 1 codes"):
+        run_all(out, env, fake, expected=env[3])
+    assert fake.calls == []
+
+
+def test_manifest_with_other_pages_is_refused(env):
+    out = prepared(env)
+    with pytest.raises(a1_run.Refused, match="A = 1 codes"):
+        run_all(out, env, Fake(), expected=[("DOC1", 2), ("DOC1", 3)])
+
+
+def test_matching_expected_pages_run(env):
+    out = prepared(env)
+    status, _ = run_all(out, env, Fake(), expected=env[3])
+    assert status == "done"
+
+
+def test_failure_message_separates_refused_from_mid_run():
+    assert "(nothing run)" in a1_run.failure_message(a1_run.Refused("x"))
+    assert "(nothing run)" in a1_run.failure_message(spikein.SpikeError("x"))
+    mid = a1_run.failure_message(a1_run.A1Error("y"))
+    assert mid.startswith("stopped: y") and "nothing run" not in mid
+
+
+def test_mid_run_model_error_is_not_a_refusal(env):
+    out = prepared(env)
+    with pytest.raises(a1_run.A1Error) as info:
+        run_all(out, env, Fake(model="claude-other-1"))
+    assert not isinstance(info.value, a1_run.Refused)
+    for check in (lambda: a1_run.check_state(out, "b" * 40, []),
+                  lambda: a1_run.check_state(out, HEAD, [" M x"])):
+        with pytest.raises(spikein.SpikeError):
+            check()
+
+
+def test_prepare_checks_keyword_consistency_before_any_call(env, monkeypatch):
+    out, items, load, drawn = env
+    monkeypatch.setattr(candidates, "a_hit_lines", lambda text: set())
+    with pytest.raises(a1_run.Refused):
+        a1_run.prepare(out, items, load, drawn, HEAD, VERSION, [], codes_md5="c" * 32)
+    assert not (out / "manifest.jsonl").exists()
+
+
+def test_page_in_two_separate_windows_sends_both_chunks(env_long):
+    pages, numbers = env_long[2]("DOC1")
+    sel = a1_run.selected_chunks(pages, numbers, {2})
+    assert len(sel) == 2
+    assert [c["pages"] for c in sel] == [[1, 2], [2, 3]]
+    out = prepared(env_long)
+    fake = Fake(table=LONG_TABLE)
+    status, _ = run_all(out, env_long, fake)
+    assert status == "done" and len(fake.calls) == 2
+    row = scores(out)[0]
+    assert row["model"] is True and row["n_accepted_on_page"] == 2
+    assert len(row["chunks"]) == 2
+
+
+def test_quote_outside_window_is_rejected(env_long):
+    out = prepared(env_long)
+    far = long_line(2, 25)  # on page 2, in neither window
+
+    def caller(text):
+        answer = Fake(table=((LINE_2, 2),))(text)
+        answer["findings"].append({"code": "A", "page": 2, "quote": far, "why": "x"})
+        return answer
+
+    run_all(out, env_long, caller)
+    totals = json.loads((out / "totals.json").read_text())
+    assert totals["rejected_by_reason"]["quote outside window"] >= 1
+    assert all(f["quote"] != far for f in scores(out)[0]["accepted"])
+
+
+def test_given_up_chunk_and_accepted_chunk_on_the_same_page(env_long):
+    out = prepared(env_long)
+    inner = Fake(table=LONG_TABLE)
+
+    def caller(text):
+        if LINE_2 in text:  # the first window never answers
+            raise cli.CallError("answer incomplete")
+        return inner(text)
+
+    for _ in range(2):
+        status, _ = run_all(out, env_long, caller)
+        assert status == "error"
+    status, _ = run_all(out, env_long, caller)
+    assert status == "done"
+    row = scores(out)[0]
+    assert row["call_errors"] == 1 and row["model"] is True
+    totals = json.loads((out / "totals.json").read_text())
+    assert totals["call_errors"] == 1 and totals["model_found"] == 1
 
 
 # source ---------------------------------------------------------------------
