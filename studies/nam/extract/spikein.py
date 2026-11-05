@@ -9,9 +9,10 @@ the inserted text, seed, git HEAD and the md5 of keywords.py.
 
 run: on the test copies, (i) the keyword step (the spiked page is an A
 candidate and an A window holds inserted lines) and (ii) the model step (an A
-finding on the spiked page whose quote passes verify_quote on the spiked page
-and lies at least 50 % inside the inserted text; the model reads only the windows that hold
-inserted lines). Drug relevance is not assessed. stdout has totals only.
+finding on the spiked page accepted by windows.check_window_finding and lying
+at least 50 % inside the inserted text; the model reads only the chunks of
+windows.window_chunks that hold inserted lines, as in the pilot-30). Drug
+relevance is not assessed. stdout has totals only.
 
 The cache and everything else under $NAM_DATA/cache is only read, never
 changed; the PDFs and OCR text are read from the local cache, nothing is
@@ -28,7 +29,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from studies.nam.extract import candidates, cli, keywords, prompt, run, windows
+from studies.nam.extract import candidates, cli, keywords, prompt, windows
 from studies.nam.inventory import measure
 
 SEED = 20261030
@@ -246,41 +247,36 @@ def overlaps(spans, start, end):
                for lo, hi in spans)
 
 
-def inserted_windows(pages, numbers, row):
-    """A windows that hold inserted lines of the spiked page."""
+def inserted_chunks(pages, numbers, row):
+    """The chunks of windows.window_chunks (the pilot-30 window handling,
+    including the split of windows above MAX_CHARS) that hold inserted lines
+    of the spiked page."""
     lo, hi = row["line_start"], row["line_start"] + row["line_count"]
-    out = []
-    for window in candidates.a_windows(pages, numbers):
-        for page, first, lines in window:
-            if page == row["page"] and first < hi and first + len(lines) > lo:
-                out.append(window)
-                break
-    return out
-
-
-def window_text(window):
-    return windows.render_segments(window)
+    return [chunk for chunk in windows.window_chunks(pages, numbers)
+            if any(page == row["page"] and first < hi and first + len(lines) > lo
+                   for page, first, lines in chunk["segments"])]
 
 
 def check_row(row, pages, numbers, caller):
-    """({"keyword": bool, "model": bool, "errors": int})."""
+    """({"keyword": bool, "model": bool, "errors": int}). A finding is
+    accepted by windows.check_window_finding (as in the pilot-30, DECISIONS
+    2026-11-05 (h)); the 50 % overlap rule is applied after it."""
     per_code, _ = candidates.candidate_pages(pages, numbers)
-    windows = inserted_windows(pages, numbers, row)
+    chunks = inserted_chunks(pages, numbers, row)
     inserted = pages[row["page"] - 1][row["char_start"]:row["char_end"]]
-    result = {"keyword": (row["page"] in per_code["A"] and bool(windows)
+    result = {"keyword": (row["page"] in per_code["A"] and bool(chunks)
                           and bool(candidates.a_hit_lines(inserted))),
               "model": False, "errors": 0}
-    for window in windows:
+    for chunk in chunks:
         try:
-            answer = caller(window_text(window))
+            answer = caller(chunk["text"])
         except cli.CallError:
             result["errors"] += 1
             continue
-        window_pages = [page for page, _, _ in window]
         for f in answer["findings"]:
-            if f["code"] != "A" or f["page"] != row["page"]:
+            if windows.check_window_finding(f, chunk, pages) is not None:
                 continue
-            if run.check_finding(f, {"pages": window_pages}, pages) is not None:
+            if f["page"] != row["page"]:
                 continue
             spans = locate_quote(pages[row["page"] - 1], f["quote"])
             if overlaps(spans, row["char_start"], row["char_end"]):
